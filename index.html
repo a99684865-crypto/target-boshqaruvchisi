@@ -1,0 +1,2226 @@
+<!-- ... existing code ... -->
+  <title>InstaCRM Enterprise — Korporativ Boshqaruv Tizimi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          },
+          colors: {
+            darkBg: '#09090b',
+            darkCard: '#0f1014',
+            darkElevated: '#16181d',
+            darkBorder: '#22242c',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #2e313b; border-radius: 4px; }
+    .corp-avatar { background: #1e212b; border: 1px solid #2e3240; color: #e2e8f0; }
+    @keyframes pulseDot { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+    .animate-pulse-dot { animation: pulseDot 1.6s infinite; }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-darkBg text-slate-900 dark:text-slate-100 h-screen overflow-hidden flex flex-col font-sans antialiased">
+
+  <!-- TOAST BILDIRISHNOMALAR KONTEYNERI -->
+  <div id="toastBox" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- YUQORI NAVIGATSIYA PANELI (TOP HEADER) -->
+  <header class="h-14 bg-white dark:bg-darkCard border-b border-slate-200 dark:border-darkBorder px-3 sm:px-4 flex items-center justify-between gap-2 shrink-0 z-30">
+    <!-- Chap: Brend va Akkaunt Tanlash -->
+    <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+      <div class="w-8 h-8 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-950 flex items-center justify-center text-sm font-bold shrink-0">
+        <i class="fa-brands fa-instagram"></i>
+      </div>
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="font-semibold text-sm tracking-tight hidden sm:inline shrink-0">InstaCRM</span>
+        <span class="text-slate-300 dark:text-slate-700 hidden sm:inline shrink-0">/</span>
+        <select id="accountSwitcher" onchange="switchInstagramAccount(this.value)"
+          class="bg-slate-100 dark:bg-darkElevated border border-slate-200 dark:border-darkBorder rounded-md px-2 py-1 text-xs font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:border-slate-400 cursor-pointer max-w-[165px] sm:max-w-[200px] truncate">
+        </select>
+        <span id="serverStatusBadge" class="hidden lg:inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded bg-slate-500/10 text-slate-400 border border-slate-500/20 font-medium shrink-0">
+          <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Lokal
+        </span>
+      </div>
+    </div>
+
+    <!-- Markaz: Real KPI Ko'rsatkichlar -->
+    <div class="hidden 2xl:flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 shrink-0">
+      <div>Mijozlar: <strong id="statTotal" class="ml-1 font-mono font-semibold text-slate-900 dark:text-slate-100">0</strong></div>
+      <div class="h-3 w-[1px] bg-slate-200 dark:bg-darkBorder"></div>
+      <div>Yangi: <strong id="statNew" class="ml-1 font-mono font-semibold text-sky-500">0</strong></div>
+      <div class="h-3 w-[1px] bg-slate-200 dark:bg-darkBorder"></div>
+      <div>Yopilgan: <strong id="statWon" class="ml-1 font-mono font-semibold text-emerald-500">0</strong></div>
+      <div class="h-3 w-[1px] bg-slate-200 dark:bg-darkBorder"></div>
+      <div>Konversiya: <strong id="statConv" class="ml-1 font-mono font-semibold text-slate-900 dark:text-slate-100">0%</strong></div>
+      <div class="h-3 w-[1px] bg-slate-200 dark:bg-darkBorder"></div>
+      <div>Aylanma: <strong id="statRevenue" class="ml-1 font-mono font-semibold text-slate-900 dark:text-slate-100">0 so'm</strong></div>
+    </div>
+
+    <!-- O'NG: Operator Profili, AI Rejim va Bildirishnomalar -->
+    <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+      <!-- Aktiv Ishchi Tanlash -->
+      <div id="operatorHeaderBox" class="hidden md:flex items-center gap-1.5 bg-slate-100 dark:bg-darkElevated border border-slate-200 dark:border-darkBorder px-2 py-1 rounded-md text-xs shrink-0">
+        <i class="fa-regular fa-user text-slate-400 text-[11px]"></i>
+        <select id="currentOperatorSelect" onchange="switchCurrentOperator(this.value)" class="bg-transparent font-medium text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer text-xs max-w-[120px] truncate"></select>
+      </div>
+
+      <button id="autopilotQuickBtn" onclick="toggleAutopilotGlobal()"
+        class="px-2 sm:px-2.5 py-1.5 rounded-md bg-slate-100 dark:bg-darkElevated hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-darkBorder text-xs font-medium transition flex items-center gap-1.5 shrink-0">
+        <i class="fa-solid fa-headset text-slate-400"></i>
+        <span class="hidden sm:inline">AI</span>
+        <span id="autopilotStateLabel" class="px-1.5 py-0.2 rounded bg-emerald-600 text-white text-[10px] font-semibold">FAOL</span>
+      </button>
+
+      <button onclick="openNewLeadModal()" title="Yangi mijozni qo'lda kiritish"
+        class="px-2.5 py-1.5 rounded-md bg-slate-900 dark:bg-white hover:opacity-90 text-white dark:text-slate-950 text-xs font-medium transition flex items-center gap-1.5 shrink-0">
+        <i class="fa-solid fa-plus text-[10px]"></i>
+        <span class="hidden sm:inline">Yangi mijoz</span>
+      </button>
+
+      <!-- Jonli Bildirishnoma Qo'ng'irog'i -->
+      <div class="relative shrink-0">
+        <button onclick="toggleNotificationsPopover()" class="w-8 h-8 rounded-md bg-slate-100 dark:bg-darkElevated border border-slate-200 dark:border-darkBorder flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white relative">
+          <i class="fa-regular fa-bell text-xs"></i>
+          <span id="notifBadge" class="hidden w-3.5 h-3.5 rounded-full bg-sky-600 text-white text-[9px] font-semibold items-center justify-center absolute -top-1 -right-1">0</span>
+        </button>
+        <div id="notifPopover" class="hidden absolute right-0 mt-2 w-80 bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder rounded-lg shadow-xl p-3 z-50 text-xs">
+          <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-200 dark:border-darkBorder">
+            <span class="font-semibold">Tizim bildirishnomalari</span>
+            <button onclick="clearNotifications()" class="text-[11px] text-slate-400 hover:text-white">Tozalash</button>
+          </div>
+          <div id="notifList" class="space-y-2 max-h-60 overflow-y-auto"></div>
+        </div>
+      </div>
+
+      <button onclick="toggleTheme()" class="w-8 h-8 rounded-md bg-slate-100 dark:bg-darkElevated border border-slate-200 dark:border-darkBorder flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white shrink-0">
+        <i id="themeIcon" class="fa-solid fa-sun text-xs"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- YANGI MIJOZ QO'SHISH MODALI -->
+  <div id="newLeadModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder w-full max-w-md rounded-lg shadow-2xl p-5 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-darkBorder pb-3">
+        <h3 class="font-semibold text-sm">Yangi mijoz qo'shish</h3>
+        <button onclick="closeNewLeadModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="createManualLead(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="text-slate-400">Mijoz ismi *</label>
+          <input type="text" id="newLeadNameInput" required placeholder="Masalan: Akmaljon Karimov"
+            class="w-full mt-1 px-3 py-2 rounded-md bg-slate-100 dark:bg-darkBg border border-slate-200 dark:border-darkBorder focus:outline-none focus:border-slate-400" />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-slate-400">Instagram @username</label>
+            <input type="text" id="newLeadUserInput" placeholder="akmal_uz"
+              class="w-full mt-1 px-3 py-2 rounded-md bg-slate-100 dark:bg-darkBg border border-slate-200 dark:border-darkBorder focus:outline-none focus:border-slate-400" />
+          </div>
+          <div>
+            <label class="text-slate-400">Telefon raqami</label>
+            <input type="text" id="newLeadPhoneInput" placeholder="+998 90 123 45 67"
+              class="w-full mt-1 px-3 py-2 rounded-md bg-slate-100 dark:bg-darkBg border border-slate-200 dark:border-darkBorder font-mono focus:outline-none focus:border-slate-400" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-slate-400">Xizmat turi</label>
+            <input type="text" id="newLeadServiceInput" placeholder="Masalan: Veb-sayt"
+              class="w-full mt-1 px-3 py-2 rounded-md bg-slate-100 dark:bg-darkBg border border-slate-200 dark:border-darkBorder focus:outline-none focus:border-slate-400" />
+          </div>
+          <div>
+            <label class="text-slate-400">Summa (so'm)</label>
+            <input type="number" id="newLeadAmountInput" placeholder="0"
+              class="w-full mt-1 px-3 py-2 rounded-md bg-slate-100 dark:bg-darkBg border border-slate-200 dark:border-darkBorder font-mono focus:outline-none focus:border-slate-400" />
+          </div>
+        </div>
+        <div>
+          <label class="text-slate-400">Birinchi murojaat matni (ixtiyoriy)</label>
+          <input type="text" id="newLeadFirstMsgInput" placeholder="Mijoz yozgan xabar yoki izoh..."
+            class="w-full mt-1 px-3 py-2 rounded-md bg-slate-100 dark:bg-darkBg border border-slate-200 dark:border-darkBorder focus:outline-none focus:border-slate-400" />
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeNewLeadModal()" class="px-3.5 py-2 rounded-md border border-slate-200 dark:border-darkBorder text-slate-400">Bekor qilish</button>
+          <button type="submit" class="px-4 py-2 rounded-md bg-sky-600 hover:bg-sky-500 text-white font-medium">Saqlash</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ASOSIY ISH MAYDONI -->
+  <div class="flex-1 flex overflow-hidden">
+
+    <!-- CHAP VERTIKAL NAVIGATION RAIL -->
+    <nav class="w-14 bg-white dark:bg-darkCard border-r border-slate-200 dark:border-darkBorder flex flex-col items-center py-3 gap-1.5 shrink-0 z-20">
+      <button onclick="switchMainTab('chat')" id="nav-chat" title="Muloqotlar (Direct)"
+        class="nav-rail-btn w-10 h-10 rounded-lg bg-slate-900 dark:bg-slate-800 text-white flex flex-col items-center justify-center gap-0.5 transition">
+        <i class="fa-regular fa-message text-xs"></i>
+        <span class="text-[9px] font-medium">Chat</span>
+      </button>
+
+      <button onclick="switchMainTab('kanban')" id="nav-kanban" title="Savdo Voronkasi"
+        class="nav-rail-btn w-10 h-10 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-darkElevated hover:text-slate-900 dark:hover:text-white flex flex-col items-center justify-center gap-0.5 transition">
+        <i class="fa-solid fa-table-columns text-xs"></i>
+        <span class="text-[9px] font-medium">Doska</span>
+      </button>
+
+      <button onclick="switchMainTab('ads')" id="nav-ads" title="Target Analitika"
+        class="nav-rail-btn w-10 h-10 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-darkElevated hover:text-slate-900 dark:hover:text-white flex flex-col items-center justify-center gap-0.5 transition">
+        <i class="fa-solid fa-chart-simple text-xs"></i>
+        <span class="text-[9px] font-medium">Target</span>
+      </button>
+
+      <button onclick="switchMainTab('database')" id="nav-database" title="Mijozlar Reestri"
+        class="nav-rail-btn w-10 h-10 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-darkElevated hover:text-slate-900 dark:hover:text-white flex flex-col items-center justify-center gap-0.5 transition">
+        <i class="fa-solid fa-list-ul text-xs"></i>
+        <span class="text-[9px] font-medium">Baza</span>
+      </button>
+
+      <button onclick="switchMainTab('broadcast')" id="nav-broadcast" title="Ommaviy Xabar (Rassilka)"
+        class="nav-rail-btn w-10 h-10 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-darkElevated hover:text-slate-900 dark:hover:text-white flex flex-col items-center justify-center gap-0.5 transition">
+        <i class="fa-solid fa-paper-plane text-xs"></i>
+        <span class="text-[9px] font-medium">Rassilka</span>
+      </button>
+
+      <div class="mt-auto"></div>
+
+      <button onclick="switchMainTab('settings')" id="nav-settings" title="Sozlamalar & API"
+        class="nav-rail-btn w-10 h-10 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-darkElevated hover:text-slate-900 dark:hover:text-white flex flex-col items-center justify-center gap-0.5 transition">
+        <i class="fa-solid fa-gear text-xs"></i>
+        <span class="text-[9px] font-medium">Sozlama</span>
+      </button>
+    </nav>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 1: JONLI CHAT & DM                                                -->
+    <!-- ===================================================================== -->
+    <div id="view-chat" class="main-view flex-1 flex overflow-hidden relative">
+      <!-- 1-Ustun: Mijozlar Ro'yxati -->
+      <aside id="sidebarPanel" class="w-full md:w-80 lg:w-[330px] bg-white dark:bg-darkCard border-r border-slate-200 dark:border-darkBorder flex flex-col shrink-0 z-10">
+        <div class="p-3 border-b border-slate-200 dark:border-darkBorder space-y-2">
+          <div class="flex gap-1.5">
+            <div class="relative flex-1">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+              <input type="text" id="searchInput" oninput="renderLeads()" placeholder="Ism, @username yoki tel..."
+                class="w-full pl-8 pr-3 py-1.5 rounded-md bg-slate-100 dark:bg-darkBg border border-slate-200 dark:border-darkBorder text-xs focus:outline-none focus:border-slate-400" />
+            </div>
+            <select id="operatorFilterSelect" onchange="renderLeads()" title="Mas'ul xodim bo'yicha filtr"
+              class="px-2 py-1.5 rounded-md bg-slate-100 dark:bg-darkBg border border-slate-200 dark:border-darkBorder text-[11px] text-slate-300 focus:outline-none">
+              <option value="all">Barcha xodim</option>
+            </select>
+          </div>
+          <div class="flex gap-1 overflow-x-auto text-[11px]">
+            <button onclick="setFilter('all')" id="filter-all" class="filter-btn px-2.5 py-1 rounded bg-slate-900 dark:bg-slate-800 text-white font-medium shrink-0">Barchasi</button>
+            <button onclick="setFilter('new')" id="filter-new" class="filter-btn px-2.5 py-1 rounded text-slate-500 hover:text-slate-900 dark:hover:text-white shrink-0">Yangi</button>
+            <button onclick="setFilter('talking')" id="filter-talking" class="filter-btn px-2.5 py-1 rounded text-slate-500 hover:text-slate-900 dark:hover:text-white shrink-0">Jarayonda</button>
+            <button onclick="setFilter('pending')" id="filter-pending" class="filter-btn px-2.5 py-1 rounded text-slate-500 hover:text-slate-900 dark:hover:text-white shrink-0">To'lov</button>
+            <button onclick="setFilter('won')" id="filter-won" class="filter-btn px-2.5 py-1 rounded text-slate-500 hover:text-slate-900 dark:hover:text-white shrink-0">Yopilgan</button>
+          </div>
+        </div>
+        <div id="leadsList" class="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-darkBorder"></div>
+      </aside>
+
+      <!-- 2-Ustun: Markaziy Chat Oynasi -->
+      <main id="chatPanel" class="hidden md:flex flex-1 flex-col bg-slate-50 dark:bg-darkBg relative min-w-0">
+        <div id="emptyChatState" class="flex-1 flex flex-col items-center justify-center text-center p-6">
+          <div class="w-12 h-12 rounded-lg bg-slate-200 dark:bg-darkElevated text-slate-500 flex items-center justify-center text-lg mb-3 border border-slate-300 dark:border-darkBorder">
+            <i class="fa-regular fa-comments"></i>
+          </div>
+          <h3 class="font-semibold text-sm">Muloqotlar ro'yxati bo'sh</h3>
+          <p class="text-slate-500 text-xs max-w-sm mt-1">Instagram Webhook ulangach targetdan yozgan mijozlar shu yerda avtomatik chiqadi yoki <strong>"+ Yangi mijoz"</strong> tugmasi orqali o'zingiz kiritishingiz mumkin.</p>
+          <button onclick="switchMainTab('settings')" class="mt-4 px-3.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium border border-slate-700">
+            API va Instagram ulash sozlamalari
+          </button>
+        </div>
+
+        <div id="activeChatContainer" class="hidden flex-1 flex flex-col h-full">
+          <!-- Chat Header -->
+          <div class="h-14 bg-white dark:bg-darkCard border-b border-slate-200 dark:border-darkBorder px-4 flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-3 min-w-0">
+              <button onclick="closeMobileChat()" class="md:hidden text-slate-400 hover:text-white p-1"><i class="fa-solid fa-arrow-left"></i></button>
+              <div id="chatAvatar" class="w-8 h-8 rounded-full corp-avatar flex items-center justify-center font-semibold text-xs shrink-0">M</div>
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <h2 id="chatName" class="font-semibold text-sm truncate">Mijoz</h2>
+                  <span id="chatAccountTag" class="hidden sm:inline-flex items-center text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-darkElevated text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-darkBorder font-mono shrink-0"></span>
+                </div>
+                <p id="chatUsername" class="text-[11px] text-slate-500 truncate">@username</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+              <!-- Mas'ul Ishchini Biriktirish -->
+              <select id="chatAssigneeSelect" onchange="updateLeadAssignee(this.value)" title="Mas'ul xodimni tanlash"
+                class="hidden sm:block px-2.5 py-1.5 rounded-md bg-slate-100 dark:bg-darkElevated border border-slate-200 dark:border-darkBorder text-xs font-medium text-slate-300 focus:outline-none">
+              </select>
+
+              <select id="chatStatusSelect" onchange="updateCurrentLeadStatus(this.value)"
+                class="px-2.5 py-1.5 rounded-md bg-slate-100 dark:bg-darkElevated border border-slate-200 dark:border-darkBorder text-xs font-medium focus:outline-none">
+                <option value="new">Yangi murojaat</option>
+                <option value="talking">Muhokamada</option>
+                <option value="pending">To'lov kutilmoqda</option>
+                <option value="won">Shartnoma / Buyurtma</option>
+                <option value="lost">Bekor qilindi</option>
+              </select>
+              <button onclick="toggleMobileCrmDrawer()" class="lg:hidden w-8 h-8 rounded-md bg-slate-100 dark:bg-darkElevated text-slate-400 border border-slate-200 dark:border-darkBorder flex items-center justify-center">
+                <i class="fa-regular fa-address-card text-xs"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Xabarlar Oqimi -->
+          <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-2.5"></div>
+
+          <!-- Menejer "yozmoqda..." Indikatori -->
+          <div id="aiTypingIndicator" class="hidden px-4 py-1.5 text-xs text-slate-400 flex items-center gap-2 bg-white dark:bg-darkCard border-t border-slate-200 dark:border-darkBorder">
+            <span class="flex gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce"></span>
+              <span class="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style="animation-delay: 0.15s"></span>
+              <span class="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style="animation-delay: 0.3s"></span>
+            </span>
+            <span id="typingStatusText">Menejer yozmoqda...</span>
+          </div>
+
+          <!-- AI Tavsiya Qilgan 3 ta Javob -->
+          <div id="aiSuggestionsBar" class="hidden px-3 py-2 bg-slate-100 dark:bg-darkElevated border-t border-slate-200 dark:border-darkBorder flex flex-col gap-1.5">
+            <div class="flex items-center justify-between text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
+              <span>Tavsiya etilgan javob variantlari:</span>
+              <button onclick="document.getElementById('aiSuggestionsBar').classList.add('hidden')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="aiChipsContainer" class="flex flex-wrap gap-1.5"></div>
+          </div>
+
+          <!-- Tez Javob Shablonlari -->
+          <div class="px-3 py-1.5 bg-white dark:bg-darkCard border-t border-slate-200 dark:border-darkBorder flex items-center gap-2 overflow-x-auto">
+            <span class="text-[11px] text-slate-400 shrink-0">Shablonlar:</span>
+            <div id="quickRepliesBar" class="flex gap-1.5"></div>
+          </div>
+
+          <!-- Admin / Ichki Izoh Xabar Yozish Formasi -->
+          <form onsubmit="sendAdminMessage(event)" class="p-3 bg-white dark:bg-darkCard border-t border-slate-200 dark:border-darkBorder flex flex-col gap-2 shrink-0">
+            <div class="flex items-center justify-between text-[11px]">
+              <div class="flex items-center gap-1.5">
+                <button type="button" id="modeDirectBtn" onclick="setChatWriteMode('direct')"
+                  class="px-2.5 py-1 rounded bg-sky-600 text-white font-medium transition">
+                  Mijozga yozish (Direct)
+                </button>
+                <button type="button" id="modeInternalBtn" onclick="setChatWriteMode('internal')"
+                  class="px-2.5 py-1 rounded bg-slate-100 dark:bg-darkElevated text-slate-400 hover:text-white border border-slate-200 dark:border-darkBorder font-medium transition">
+                  <i class="fa-solid fa-lock text-[10px] mr-1 text-amber-500"></i>Ichki eslatma (Faqat xodimlar)
+                </button>
+              </div>
+              <span id="writeModeHint" class="text-slate-500 hidden sm:inline">Xabar to'g'ridan-to'g'ri Instagram Direct'ga ketadi</span>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button type="button" id="aiDraftBtn" onclick="generate3AiCopilotSuggestions()" title="3 xil javob variantini tayyorlash"
+                class="px-3 py-2 rounded-md bg-slate-100 dark:bg-darkElevated hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-darkBorder text-slate-700 dark:text-slate-200 text-xs font-medium shrink-0 flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-sparkles text-sky-500"></i>
+                <span class="hidden sm:inline">Javob taklifi</span>
+              </button>
+
+              <input type="text" id="messageInput" placeholder="Mijozga javob yozing..." autocomplete="off"
+                class="flex-1 px-3 py-2 rounded-md bg-slate-100 dark:bg-darkBg border border-slate-200 dark:border-darkBorder text-xs sm:text-sm focus:outline-none focus:border-slate-400" />
+
+              <button type="submit" id="sendMsgSubmitBtn" class="px-4 py-2 rounded-md bg-sky-600 hover:bg-sky-500 text-white font-medium text-xs sm:text-sm transition flex items-center gap-1.5 shrink-0">
+                <span class="hidden sm:inline">Yuborish</span>
+                <i class="fa-solid fa-paper-plane text-xs"></i>
+              </button>
+            </div>
+          </form>
+        </div>
+      </main>
+
+      <!-- 3-Ustun: Korporativ CRM Mijoz Kartasi -->
+      <aside id="crmInfoPanel" class="hidden lg:flex w-80 bg-white dark:bg-darkCard border-l border-slate-200 dark:border-darkBorder flex-col p-4 overflow-y-auto shrink-0 z-30">
+        <div class="flex items-center justify-between lg:hidden mb-3 pb-2 border-b border-darkBorder">
+          <span class="font-semibold text-sm">Mijoz ma'lumotlari</span>
+          <button onclick="toggleMobileCrmDrawer()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div id="emptyCrmInfo" class="text-center text-slate-500 text-xs my-auto">Mijoz tanlanganda ma'lumotlar kartasi ochiladi.</div>
+
+        <div id="activeCrmInfo" class="hidden space-y-3.5">
+          <!-- Tezkor Aloqa Tugmalari (Qo'ng'iroq / Telegram / Nusxalash) -->
+          <div class="grid grid-cols-3 gap-1.5">
+            <button onclick="copyClientPhone()" class="py-1.5 px-2 rounded-md bg-slate-100 dark:bg-darkElevated hover:border-slate-400 border border-slate-200 dark:border-darkBorder text-[11px] font-medium flex items-center justify-center gap-1 transition">
+              <i class="fa-regular fa-copy text-slate-400"></i> Tel nusxa
+            </button>
+            <button onclick="openClientTelegram()" class="py-1.5 px-2 rounded-md bg-slate-100 dark:bg-darkElevated hover:border-slate-400 border border-slate-200 dark:border-darkBorder text-[11px] font-medium flex items-center justify-center gap-1 transition">
+              <i class="fa-brands fa-telegram text-sky-500"></i> Telegram
+            </button>
+            <button onclick="setQuickFollowUp()" class="py-1.5 px-2 rounded-md bg-slate-100 dark:bg-darkElevated hover:border-slate-400 border border-slate-200 dark:border-darkBorder text-[11px] font-medium flex items-center justify-center gap-1 transition">
+              <i class="fa-regular fa-clock text-amber-500"></i> +1 soat
+            </button>
+          </div>
+
+          <button onclick="runAiCrmExtraction()" id="aiExtractBtn"
+            class="w-full py-2 px-3 rounded-md bg-slate-100 dark:bg-darkElevated hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-darkBorder text-xs font-medium flex items-center justify-center gap-2 transition">
+            <i class="fa-solid fa-arrows-rotate text-sky-500"></i>
+            <span>Suhbatdan ma'lumotlarni yangilash</span>
+          </button>
+
+          <div class="space-y-3 bg-slate-50 dark:bg-darkBg p-3.5 rounded-lg border border-slate-200 dark:border-darkBorder">
+            <div class="flex items-center justify-between">
+              <h3 class="text-[11px] font-semibold uppercase text-slate-400 tracking-wider">Buyurtma kartasi</h3>
+              <select id="crmPriority" onchange="saveCrmDetails()" class="text-[11px] px-2 py-0.5 rounded bg-darkElevated border border-darkBorder text-slate-300 font-medium">
+                <option value="high">Yuqori ustuvorlik</option>
+                <option value="medium">O'rtacha</option>
+                <option value="low">Past</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="text-[11px] text-slate-400">Telefon raqami</label>
+              <input type="text" id="crmPhone" onchange="saveCrmDetails()" placeholder="+998 90 123 45 67"
+                class="w-full mt-1 px-2.5 py-1.5 rounded-md bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder text-xs font-mono focus:outline-none focus:border-slate-400" />
+            </div>
+
+            <div>
+              <label class="text-[11px] text-slate-400">Xizmat / Mahsulot</label>
+              <input type="text" id="crmService" onchange="saveCrmDetails()" placeholder="Video To'y Taklifnoma"
+                class="w-full mt-1 px-2.5 py-1.5 rounded-md bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder text-xs focus:outline-none focus:border-slate-400" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[11px] text-slate-400">Summa (so'm)</label>
+                <input type="number" id="crmAmount" onchange="saveCrmDetails()" placeholder="90000"
+                  class="w-full mt-1 px-2.5 py-1.5 rounded-md bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder text-xs font-mono focus:outline-none focus:border-slate-400" />
+              </div>
+              <div>
+                <label class="text-[11px] text-slate-400">Muddat / Sana</label>
+                <input type="text" id="crmEventDate" onchange="saveCrmDetails()" placeholder="28-noyabr"
+                  class="w-full mt-1 px-2.5 py-1.5 rounded-md bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder text-xs focus:outline-none focus:border-slate-400" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[11px] text-slate-400">To'lov holati</label>
+                <select id="crmPaymentStatus" onchange="saveCrmDetails()"
+                  class="w-full mt-1 px-2 py-1.5 rounded-md bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder text-xs focus:outline-none focus:border-slate-400">
+                  <option value="unpaid">To'lanmagan</option>
+                  <option value="advance">50% Avans</option>
+                  <option value="paid">100% To'langan</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-[11px] text-slate-400">Qayta aloqa (Follow-up)</label>
+                <input type="text" id="crmFollowUp" onchange="saveCrmDetails()" placeholder="Bugun, 18:00"
+                  class="w-full mt-1 px-2 py-1.5 rounded-md bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder text-xs focus:outline-none focus:border-slate-400" />
+              </div>
+            </div>
+
+            <div>
+              <label class="text-[11px] text-slate-400">Ichki eslatma</label>
+              <textarea id="crmNotes" rows="2" onchange="saveCrmDetails()" placeholder="Qo'shimcha tafsilotlar..."
+                class="w-full mt-1 px-2.5 py-1.5 rounded-md bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder text-xs focus:outline-none focus:border-slate-400"></textarea>
+            </div>
+          </div>
+
+          <div class="bg-slate-50 dark:bg-darkBg border border-slate-200 dark:border-darkBorder rounded-lg p-3 text-xs space-y-1">
+            <span class="text-slate-400 text-[11px] uppercase font-semibold">Reklama manbasi</span>
+            <input type="text" id="crmAdCampaignInput" onchange="saveCrmDetails()" placeholder="Target kampaniya nomi..."
+              class="w-full mt-1 px-2.5 py-1 rounded bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder text-xs text-slate-300 focus:outline-none" />
+          </div>
+
+          <button onclick="deleteCurrentLead()" class="w-full py-2 rounded-md text-red-500 hover:bg-red-500/10 border border-slate-200 dark:border-darkBorder text-xs font-medium transition">
+            Mijozni o'chirish
+          </button>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 2: KANBAN DOSKA (SAVDO PIPELINE)                                  -->
+    <!-- ===================================================================== -->
+    <div id="view-kanban" class="main-view hidden flex-1 flex-col p-4 sm:p-6 overflow-hidden">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4 shrink-0">
+        <div>
+          <h1 class="text-base font-semibold">Savdo bosqichlari (Pipeline)</h1>
+          <p class="text-xs text-slate-500">Mijozlar holatini bosqichlar kesimida nazorat qilish</p>
+        </div>
+        <button onclick="openNewLeadModal()" class="px-3.5 py-2 rounded-md bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-xs font-medium">
+          + Yangi mijoz
+        </button>
+      </div>
+
+      <div id="kanbanBoard" class="flex-1 flex gap-4 overflow-x-auto pb-2"></div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 3: TARGET REKLAMA & ANALITIKA                                     -->
+    <!-- ===================================================================== -->
+    <div id="view-ads" class="main-view hidden flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 class="text-base font-semibold">Target reklama kampaniyalari va hisobot</h1>
+          <p class="text-xs text-slate-500">Yoqilgan reklama kampaniyalari xarajati va tushum ko'rsatkichlari</p>
+        </div>
+        <span id="metaAdsConnBadge" class="px-2.5 py-1 rounded bg-slate-500/10 text-slate-400 border border-slate-500/20 text-xs font-medium">
+          Meta Token kiritilmagan
+        </span>
+      </div>
+
+      <!-- Dinamik KPI Kartalar -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder p-4 rounded-lg">
+          <p class="text-xs text-slate-500">Jami reklama xarajati</p>
+          <h3 id="adsTotalSpend" class="text-xl font-semibold font-mono mt-1">$0.00</h3>
+          <span id="adsAvgCpl" class="text-[11px] text-slate-400">O'rtacha CPL: $0.00</span>
+        </div>
+        <div class="bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder p-4 rounded-lg">
+          <p class="text-xs text-slate-500">Kiruvchi murojaatlar (CRM)</p>
+          <h3 id="adsTotalLeads" class="text-xl font-semibold font-mono mt-1">0</h3>
+          <span class="text-[11px] text-slate-400">Barcha sahifalar bo'yicha</span>
+        </div>
+        <div class="bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder p-4 rounded-lg">
+          <p class="text-xs text-slate-500">Yopilgan shartnomalar</p>
+          <h3 id="adsWonDeals" class="text-xl font-semibold font-mono mt-1">0</h3>
+          <span id="adsConvRate" class="text-[11px] text-slate-400">Konversiya: 0%</span>
+        </div>
+        <div class="bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder p-4 rounded-lg">
+          <p class="text-xs text-slate-500">Umumiy savdo tushumi</p>
+          <h3 id="adsTotalRev" class="text-xl font-semibold font-mono mt-1 text-emerald-500">0 so'm</h3>
+          <span class="text-[11px] text-slate-400">Yopilgan shartnomalardan</span>
+        </div>
+      </div>
+
+      <!-- Kampaniya qo'shish va Jadval -->
+      <div class="bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder rounded-lg p-5 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h3 class="font-semibold text-sm">Reklama kampaniyalari ro'yxati</h3>
+          <form onsubmit="addAdCampaign(event)" class="flex flex-wrap items-center gap-2">
+            <input type="text" id="newCampName" required placeholder="Kampaniya nomi..." class="px-2.5 py-1.5 rounded-md bg-darkBg border border-darkBorder text-xs" />
+            <input type="number" step="0.01" id="newCampSpend" required placeholder="Xarajat ($)" class="w-28 px-2.5 py-1.5 rounded-md bg-darkBg border border-darkBorder text-xs font-mono" />
+            <input type="number" id="newCampLeads" required placeholder="Lidlar soni" class="w-28 px-2.5 py-1.5 rounded-md bg-darkBg border border-darkBorder text-xs font-mono" />
+            <button type="submit" class="px-3 py-1.5 rounded-md bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium">+ Qo'shish</button>
+          </form>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="text-slate-400 border-b border-slate-200 dark:border-darkBorder">
+              <tr>
+                <th class="pb-2.5 font-medium">Kampaniya</th>
+                <th class="pb-2.5 font-medium">Sahifa</th>
+                <th class="pb-2.5 font-medium">Xarajat</th>
+                <th class="pb-2.5 font-medium">Lidlar</th>
+                <th class="pb-2.5 font-medium">CPL</th>
+                <th class="pb-2.5 font-medium">Amal</th>
+              </tr>
+            </thead>
+            <tbody id="campaignsTableBody" class="divide-y divide-slate-200 dark:divide-darkBorder"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 4: MIJOZLAR BAZASI & EXCEL/CSV EKSPORT                            -->
+    <!-- ===================================================================== -->
+    <div id="view-database" class="main-view hidden flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 class="text-base font-semibold">Mijozlar reestri</h1>
+          <p class="text-xs text-slate-500">Barcha murojaatlar, shartnoma summalari va to'lov holatlari jadvali</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="openNewLeadModal()" class="px-3 py-2 rounded-md border border-slate-200 dark:border-darkBorder text-xs font-medium hover:border-slate-400">
+            + Yangi mijoz
+          </button>
+          <button onclick="exportLeadsToCSV()" class="px-3.5 py-2 rounded-md bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-xs font-medium flex items-center gap-2">
+            <i class="fa-solid fa-download text-[11px]"></i>
+            <span>CSV / Excel eksport</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder rounded-lg overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50 dark:bg-darkElevated text-slate-400 border-b border-slate-200 dark:border-darkBorder">
+              <tr>
+                <th class="p-3 font-medium">Mijoz</th>
+                <th class="p-3 font-medium">Sahifa</th>
+                <th class="p-3 font-medium">Telefon</th>
+                <th class="p-3 font-medium">Xizmat</th>
+                <th class="p-3 font-medium">Muddat</th>
+                <th class="p-3 font-medium">Summa</th>
+                <th class="p-3 font-medium">To'lov</th>
+                <th class="p-3 font-medium">Holat</th>
+                <th class="p-3 font-medium">Amal</th>
+              </tr>
+            </thead>
+            <tbody id="databaseTableBody" class="divide-y divide-slate-200 dark:divide-darkBorder"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- TAB 4.5: OMMAVIY XABAR YUBORISH (BROADCAST / RASSILKA)                -->
+  <!-- ===================================================================== -->
+  <div id="view-broadcast" class="main-view hidden flex-1 overflow-y-auto p-4 sm:p-6">
+    <div class="max-w-3xl mx-auto space-y-5">
+      <div>
+        <h1 class="text-base font-semibold">Ommaviy xabar yuborish (Instagram Direct Rassilka)</h1>
+        <p class="text-xs text-slate-500">Tanlangan guruhdagi barcha mijozlarga bir vaqtning o'zida aksiya, chegirma yoki eslatma yuborish</p>
+      </div>
+
+      <div class="bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder rounded-lg p-5 space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="text-xs text-slate-400 font-medium">Qabul qiluvchilar guruhi (Status)</label>
+            <select id="broadcastTargetStatus" onchange="updateBroadcastRecipientCount()"
+              class="w-full mt-1.5 px-3 py-2 rounded-md bg-slate-100 dark:bg-darkBg border border-slate-200 dark:border-darkBorder text-xs focus:outline-none">
+              <option value="all">Barcha mijozlar</option>
+              <option value="new">Faqat "Yangi murojaat" bosqichidagilar</option>
+              <option value="talking">Faqat "Muhokamada" turganlar</option>
+              <option value="pending">Faqat "To'lov kutilmoqda" bosqichidagilar</option>
+              <option value="won">Avval buyurtma bergan doimiy mijozlar</option>
+            </select>
+          </div>
+          <div class="bg-slate-50 dark:bg-darkBg border border-slate-200 dark:border-darkBorder rounded-md p-3 flex flex-col justify-center">
+            <span class="text-[11px] text-slate-400">Xabar yuboriladigan mijozlar soni:</span>
+            <span id="broadcastCountLabel" class="text-lg font-mono font-semibold text-sky-500 mt-0.5">0 ta mijoz</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-xs text-slate-400 font-medium">Xabar matni (<code class="text-sky-400">{ism}</code> yozsangiz mijoz ismi avtomatik qo'yiladi)</label>
+          </div>
+          <textarea id="broadcastMessageText" rows="5" placeholder="Assalomu alaykum, {ism}! Bugun bizda barcha xizmatlarga 20% chegirma e'lon qilindi..."
+            class="w-full p-3 rounded-md bg-slate-100 dark:bg-darkBg border border-slate-200 dark:border-darkBorder text-xs leading-relaxed focus:outline-none focus:border-slate-400"></textarea>
+        </div>
+
+        <div class="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-darkBorder">
+          <span class="text-[11px] text-slate-500">Xabarlar Instagram API orqali ketma-ket yuboriladi</span>
+          <button onclick="sendMassBroadcast()" class="px-4 py-2 rounded-md bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium flex items-center gap-2 transition">
+            <i class="fa-solid fa-paper-plane text-[11px]"></i>
+            <span>Rassilkani boshlash</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder rounded-lg p-5 space-y-3">
+        <h3 class="font-semibold text-sm">Yuborilgan rassilkalar tarixi</h3>
+        <div id="broadcastHistoryList" class="space-y-2 text-xs"></div>
+      </div>
+    </div>
+  </div>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 5: SOZLAMALAR & BACKEND INTEGRATSIYA                              -->
+    <!-- ===================================================================== -->
+    <div id="view-settings" class="main-view hidden flex-1 overflow-y-auto p-4 sm:p-6">
+      <div class="max-w-4xl mx-auto space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h1 class="text-base font-semibold">Tizim sozlamalari va API integratsiya</h1>
+            <p class="text-xs text-slate-500">Gemini API kaliti, Instagram sahifalar, jamoa xodimlari va backend ulanishi</p>
+          </div>
+          <button onclick="resetAllSystemData()" class="px-3 py-1.5 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-medium">
+            Barcha ma'lumotlarni tozalash (Reset)
+          </button>
+        </div>
+
+        <!-- 1. API Kalitlar va Server Ulanishi -->
+        <div class="bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder rounded-lg p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="font-semibold text-sm">API Kalitlar va Server Ulanishi</h3>
+              <p class="text-xs text-slate-500">Google Gemini API kaliti, Meta Page Access Token va Render backend manzili</p>
+            </div>
+            <span id="apiKeyStatusBadge" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-darkBorder text-[11px] font-mono">
+              Kalit kiritilmagan
+            </span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="text-[11px] text-slate-400">Gemini API Key (Google AI Studio)</label>
+              <input type="password" id="customGeminiKeyInput" placeholder="AIzaSy..."
+                class="w-full mt-1 px-3 py-2 rounded-md bg-slate-100 dark:bg-darkBg border border-slate-200 dark:border-darkBorder text-xs font-mono focus:outline-none focus:border-slate-400" />
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400">Backend Server URL (Render / Localhost)</label>
+              <input type="text" id="customBackendUrlInput" placeholder="https://instacrm-server.onrender.com"
+                class="w-full mt-1 px-3 py-2 rounded-md bg-slate-100 dark:bg-darkBg border border-slate-200 dark:border-darkBorder text-xs font-mono focus:outline-none focus:border-slate-400" />
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400">Meta Token — <span class="font-mono text-sky-400">@toylarga.taklfinoma</span></label>
+              <input type="password" id="customMetaToken1Input" placeholder="EAABsbCS... (1-sahifa tokeni)"
+                class="w-full mt-1 px-3 py-2 rounded-md bg-slate-100 dark:bg-darkBg border border-slate-200 dark:border-darkBorder text-xs font-mono focus:outline-none focus:border-slate-400" />
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400">Meta Token — <span class="font-mono text-sky-400">@toyga.taklifnoma</span></label>
+              <input type="password" id="customMetaToken2Input" placeholder="EAABsbCS... (2-sahifa tokeni)"
+                class="w-full mt-1 px-3 py-2 rounded-md bg-slate-100 dark:bg-darkBg border border-slate-200 dark:border-darkBorder text-xs font-mono focus:outline-none focus:border-slate-400" />
+            </div>
+            <div class="md:col-span-2">
+              <label class="text-[11px] text-slate-400">Telegram Bot Token & Chat ID (bildirishnoma uchun)</label>
+              <input type="text" id="customTgConfigInput" placeholder="123456:ABC... / -100123456"
+                class="w-full mt-1 px-3 py-2 rounded-md bg-slate-100 dark:bg-darkBg border border-slate-200 dark:border-darkBorder text-xs font-mono focus:outline-none focus:border-slate-400" />
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="saveApiCredentials()" class="px-4 py-1.5 rounded-md bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium">
+              Kalitlarni saqlash
+            </button>
+            <button onclick="testGeminiConnection()" class="px-3.5 py-1.5 rounded-md bg-slate-100 dark:bg-darkElevated border border-slate-200 dark:border-darkBorder text-xs font-medium hover:border-slate-400">
+              Gemini ulanishini tekshirish
+            </button>
+            <button onclick="syncWithBackendServer(true)" class="px-3.5 py-1.5 rounded-md bg-slate-100 dark:bg-darkElevated border border-slate-200 dark:border-darkBorder text-xs font-medium hover:border-slate-400">
+              Server bilan sinxronlash
+            </button>
+          </div>
+
+          <!-- API Kalitlar va Meta Tokenni Qayerdan Olish Qo'llanmasi -->
+          <div class="mt-4 pt-4 border-t border-slate-200 dark:border-darkBorder grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+            <div class="p-3 rounded-md bg-slate-50 dark:bg-darkBg border border-slate-200 dark:border-darkBorder space-y-1">
+              <div class="font-semibold text-slate-800 dark:text-slate-200">1. Meta Instagram Token & Webhook</div>
+              <p class="text-slate-500 leading-relaxed">
+                <strong>developers.facebook.com</strong> saytiga kiring &rarr; <em>My Apps &rarr; Create App (Business)</em> &rarr; <strong>Instagram</strong> mahsulotini qo'shing &rarr; <code>@toylarga.taklfinoma</code> sahifasini ulab <strong>Generate Token</strong> tugmasidan token oling. Webhook URL sifatida Render manzilingiz oxiriga <code>/webhook/instagram</code> qo'shib kiriting.
+              </p>
+            </div>
+            <div class="p-3 rounded-md bg-slate-50 dark:bg-darkBg border border-slate-200 dark:border-darkBorder space-y-1">
+              <div class="font-semibold text-slate-800 dark:text-slate-200">2. Gemini API, MongoDB & Telegram Bot</div>
+              <p class="text-slate-500 leading-relaxed">
+                <strong>Gemini Key:</strong> <code>aistudio.google.com</code> &rarr; <em>Get API key</em>.<br>
+                <strong>MongoDB:</strong> <code>cloud.mongodb.com</code> &rarr; <em>Connect &rarr; Drivers</em> (<code>MONGO_URI</code>).<br>
+                <strong>Telegram:</strong> <code>@BotFather</code> dan token va <code>@userinfobot</code> dan Chat ID olib Render Environment Variables ga qo'ying.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Instagram Sahifalar va Jamoa Xodimlarini Boshqarish -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder rounded-lg p-5 space-y-3">
+            <h3 class="font-semibold text-sm">Instagram sahifalar</h3>
+            <div id="accountsManageList" class="space-y-1.5"></div>
+            <div class="flex gap-2 pt-1">
+              <input type="text" id="newAccountInput" placeholder="@yangi.sahifa" class="flex-1 px-3 py-1.5 rounded-md bg-slate-100 dark:bg-darkBg border border-slate-200 dark:border-darkBorder text-xs font-mono" />
+              <button onclick="addInstagramAccount()" class="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium">+ Qo'shish</button>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder rounded-lg p-5 space-y-3">
+            <h3 class="font-semibold text-sm">Jamoa xodimlari / Operatorlar</h3>
+            <div id="operatorsManageList" class="space-y-1.5"></div>
+            <div class="flex gap-2 pt-1">
+              <input type="text" id="newOperatorInput" placeholder="Ism (masalan: Sardor)" class="flex-1 px-3 py-1.5 rounded-md bg-slate-100 dark:bg-darkBg border border-slate-200 dark:border-darkBorder text-xs" />
+              <button onclick="addTeamOperator()" class="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium">+ Qo'shish</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. AI Bilimlar Bazasi -->
+        <div class="bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder rounded-lg p-5 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 class="font-semibold text-sm">Muloqot uslubi va narxlar bazasi</h3>
+              <p class="text-xs text-slate-500">AI menejer mijozlar bilan muloqotda foydalanadigan asosiy ma'lumotlar</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <select id="settingsVibeSelect" onchange="changeAiVibe(this.value)" class="px-3 py-1.5 rounded-md bg-darkBg border border-darkBorder text-xs text-slate-200 font-medium">
+                <option value="human">Samimiy & Jonli</option>
+                <option value="fast">Qisqa & Aniq</option>
+                <option value="formal">Rasmiy & Biznes</option>
+              </select>
+              <button onclick="saveKnowledgeBaseFromTab()" class="px-3.5 py-1.5 rounded-md bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium">
+                Saqlash
+              </button>
+            </div>
+          </div>
+          <textarea id="aiKnowledgeEditor" rows="7" placeholder="Xizmatlar, narxlar, ish vaqti va buyurtma shartlarini bu yerga yozing..."
+            class="w-full p-3 rounded-md bg-slate-100 dark:bg-darkBg border border-slate-200 dark:border-darkBorder text-xs leading-relaxed focus:outline-none focus:border-slate-400"></textarea>
+        </div>
+
+        <!-- 4. Shablonlarni Boshqarish -->
+        <div class="bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder rounded-lg p-5 space-y-3">
+          <h3 class="font-semibold text-sm">Tezkor javob shablonlari</h3>
+          <div id="settingsTemplatesList" class="space-y-2"></div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2">
+            <input type="text" id="newTplTitle" placeholder="Shablon nomi" class="px-3 py-1.5 rounded-md bg-darkBg border border-darkBorder text-xs" />
+            <input type="text" id="newTplText" placeholder="Xabar matni..." class="sm:col-span-2 px-3 py-1.5 rounded-md bg-darkBg border border-darkBorder text-xs" />
+          </div>
+          <button onclick="addTemplate()" class="px-3.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium">+ Qo'shish</button>
+        </div>
+
+        <!-- 5. Backend Server.js Kodi -->
+        <div class="bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder rounded-lg p-5 space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="font-semibold text-sm">To'liq Node.js + MongoDB + Gemini + Instagram Server (<span class="font-mono text-xs">server.js</span>)</h3>
+              <p class="text-xs text-slate-500">MongoDB Atlas va Render'ga ulash uchun tayyor backend kodi</p>
+            </div>
+            <button onclick="copyServerCode()" class="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium flex items-center gap-1.5">
+              <i class="fa-regular fa-copy"></i> Nusxalash
+            </button>
+          </div>
+          <pre id="serverCodeBlock" class="p-4 rounded-md bg-darkBg border border-darkBorder text-slate-300 font-mono text-[11px] overflow-x-auto max-h-96 leading-relaxed">const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+require('dotenv').config();
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public'));
+
+// 1. MONGODB ATLAS ULANISHI
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log('MongoDB Atlas muvaffaqiyatli ulandi'))
+  .catch(err => console.error('MongoDB xato:', err));
+
+const LeadSchema = new mongoose.Schema({
+  igId: { type: String, unique: true },
+  name: String,
+  username: String,
+  account: { type: String, default: '@toylarga.taklfinoma' },
+  status: { type: String, default: 'new' },
+  priority: { type: String, default: 'medium' },
+  assignee: { type: String, default: 'Asosiy Menejer' },
+  phone: String,
+  service: String,
+  amount: { type: Number, default: 0 },
+  eventDate: String,
+  paymentStatus: { type: String, default: 'unpaid' },
+  followUp: String,
+  adCampaign: String,
+  notes: String,
+  unread: { type: Boolean, default: true },
+  messages: [{ sender: String, text: String, time: String, internal: Boolean }]
+}, { timestamps: true });
+
+const Lead = mongoose.model('Lead', LeadSchema);
+
+// 2. META INSTAGRAM WEBHOOK TEKSHIRUVI (GET)
+app.get('/webhook/instagram', (req, res) => {
+  if (req.query['hub.verify_token'] === process.env.META_VERIFY_TOKEN) {
+    return res.status(200).send(req.query['hub.challenge']);
+  }
+  res.sendStatus(403);
+});
+
+// 3. INSTAGRAM DIRECT'DAN YANGI XABAR KELGANDA (POST)
+app.post('/webhook/instagram', async (req, res) => {
+  res.sendStatus(200);
+  const entry = req.body.entry?.[0];
+  const recipientPageId = entry?.id;
+  const event = entry?.messaging?.[0];
+  if (!event || !event.message || event.message.is_echo) return;
+
+  const senderId = event.sender.id;
+  const userText = event.message.text || '[Media fayl]';
+  const timeNow = new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+
+  // Qaysi Instagram sahifaga yozilganini aniqlash
+  const accountName = recipientPageId === process.env.META_PAGE_ID_2
+    ? '@toyga.taklifnoma'
+    : '@toylarga.taklfinoma';
+
+  let lead = await Lead.findOne({ igId: senderId });
+  if (!lead) {
+    lead = await Lead.create({
+      igId: senderId,
+      name: 'Instagram Mijoz #' + senderId.slice(-4),
+      username: 'ig_' + senderId.slice(-5),
+      account: accountName,
+      messages: []
+    });
+  }
+
+  lead.unread = true;
+  lead.messages.push({ sender: 'user', text: userText, time: timeNow });
+  await lead.save();
+
+  // Telegram botga xabar yuborish
+  if (process.env.TG_BOT_TOKEN && process.env.TG_CHAT_ID) {
+    fetch(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: process.env.TG_CHAT_ID,
+        text: `📩 Yangi xabar (${accountName})!\nMijoz: ${lead.name}\nXabar: ${userText}`
+      })
+    }).catch(() => {});
+  }
+
+  // Gemini AI orqali avtomatik javob berish
+  if (process.env.GEMINI_API_KEY) {
+    const history = lead.messages.map(m => `${m.sender === 'user' ? 'Mijoz' : 'Menejer'}: ${m.text}`).join('\n');
+    const aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: `Sen tirik o'zbek menejerisan. Qisqa va samimiy javob yoz.\nSuhbat:\n${history}` }] }]
+      })
+    });
+    const aiData = await aiRes.json();
+    const replyText = aiData.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (replyText) {
+      await sendInstagramDM(senderId, replyText, accountName);
+      lead.messages.push({ sender: 'ai', text: replyText, time: timeNow });
+      await lead.save();
+    }
+  }
+});
+
+// INSTAGRAM GRAPH API ORQALI JAVOB YUBORISH (IKKALA SAHIFA UCHUN)
+async function sendInstagramDM(recipientId, text, accountName) {
+  const token = accountName === '@toyga.taklifnoma'
+    ? (process.env.META_TOKEN_2 || process.env.META_PAGE_TOKEN)
+    : (process.env.META_TOKEN_1 || process.env.META_PAGE_TOKEN);
+
+  if (!token) return;
+  await fetch(`https://graph.facebook.com/v21.0/me/messages?access_token=${token}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ recipient: { id: recipientId }, message: { text } })
+  });
+}
+
+// CRM FRONTEND API ROUTES
+app.get('/api/leads', async (req, res) => res.json(await Lead.find().sort({ updatedAt: -1 })));
+app.post('/api/leads', async (req, res) => res.json(await Lead.create(req.body)));
+app.put('/api/leads/:id', async (req, res) => res.json(await Lead.findByIdAndUpdate(req.params.id, req.body, { new: true })));
+app.delete('/api/leads/:id', async (req, res) => res.json(await Lead.findByIdAndDelete(req.params.id)));
+app.post('/api/send-message', async (req, res) => {
+  const { leadId, igId, text, internal } = req.body;
+  const timeNow = new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+  const existing = await Lead.findById(leadId);
+  if (!internal && igId) await sendInstagramDM(igId, text, existing?.account);
+  const lead = await Lead.findByIdAndUpdate(leadId, { $push: { messages: { sender: 'admin', text, time: timeNow, internal } } }, { new: true });
+  res.json(lead);
+});
+
+app.listen(process.env.PORT || 3000, () => console.log('InstaCRM Server 3000-portda ishga tushdi'));</pre>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const MODEL_NAME = "gemini-2.5-flash";
+
+    function getActiveGeminiKey() {
+      return localStorage.getItem('instacrm_custom_gemini_key') || "";
+    }
+
+    function getBackendUrl() {
+      const saved = (localStorage.getItem('instacrm_custom_backend_url') || "").replace(/\/$/, "");
+      if (saved) return saved;
+      if (window.location.protocol.startsWith('http') && !window.location.hostname.includes('usercontent')) {
+        return window.location.origin;
+      }
+      return "";
+    }
+
+    // =========================================================================
+    // 1. TOZA BOSHLANG'ICH HOLAT (SOXTA MA'LUMOTLARSIZ)
+    // =========================================================================
+    const DEFAULT_STATE = {
+      currentTab: 'chat',
+      accounts: ['@toylarga.taklfinoma', '@toyga.taklifnoma'],
+      selectedAccount: '@toylarga.taklfinoma',
+      operators: ['Asosiy Menejer'],
+      currentOperator: 'Asosiy Menejer',
+      writeMode: 'direct',
+      autopilot: true,
+      aiVibe: 'human',
+      activeLeadId: null,
+      filter: 'all',
+      knowledgeBase: "",
+      templates: [],
+      notifications: [],
+      campaigns: [],
+      broadcasts: [],
+      leads: []
+    };
+
+    let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+
+    // =========================================================================
+    // 2. GEMINI API CHAQIRUVI
+    // =========================================================================
+    async function callGeminiAPI(promptText, isJson = false) {
+      const apiKey = getActiveGeminiKey();
+      if (!apiKey) throw new Error("API key missing");
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`;
+      const body = {
+        contents: [{ parts: [{ text: promptText }] }],
+        generationConfig: { temperature: 0.7 }
+      };
+      if (isJson) {
+        body.generationConfig.responseMimeType = "application/json";
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      if (!response.ok) throw new Error("API Error: " + response.status);
+      const data = await response.json();
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      return isJson ? JSON.parse(rawText) : rawText;
+    }
+
+    // =========================================================================
+    // 3. INIT & SAQLASH
+    // =========================================================================
+    window.addEventListener('DOMContentLoaded', async () => {
+      const saved = localStorage.getItem('instacrm_prod_v1');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          state = { ...DEFAULT_STATE, ...parsed };
+        } catch (e) {}
+      }
+
+      syncCredentialInputsUI();
+      renderAccountsAndOperatorsUI();
+
+      document.getElementById('aiKnowledgeEditor').value = state.knowledgeBase || "";
+      document.getElementById('settingsVibeSelect').value = state.aiVibe || 'human';
+      renderQuickReplies();
+      renderModalTemplates();
+      renderNotifications();
+      refreshAllViews();
+
+      if (state.activeLeadId && state.leads.some(l => l.id === state.activeLeadId)) {
+        selectLead(state.activeLeadId, false);
+      }
+
+      // Agar Backend URL kiritilgan bo'lsa, har 6 soniyada real xabarlarni tekshiradi
+      if (getBackendUrl()) {
+        await syncWithBackendServer(false);
+        setInterval(() => syncWithBackendServer(false), 6000);
+      }
+    });
+
+    function saveState() {
+      localStorage.setItem('instacrm_prod_v1', JSON.stringify(state));
+    }
+
+    function refreshAllViews() {
+      renderLeads();
+      updateKPIs();
+      if (state.currentTab === 'kanban') renderKanban();
+      if (state.currentTab === 'database') renderDatabaseTable();
+      if (state.currentTab === 'ads') renderAdsTab();
+      if (state.currentTab === 'broadcast') {
+        updateBroadcastRecipientCount();
+        renderBroadcastHistory();
+      }
+    }
+
+    function syncCredentialInputsUI() {
+      const customKey = localStorage.getItem('instacrm_custom_gemini_key') || "";
+      const customUrl = localStorage.getItem('instacrm_custom_backend_url') || "";
+      const customMeta1 = localStorage.getItem('instacrm_custom_meta_token_1') || "";
+      const customMeta2 = localStorage.getItem('instacrm_custom_meta_token_2') || "";
+      const customTg = localStorage.getItem('instacrm_custom_tg_config') || "";
+
+      const elKey = document.getElementById('customGeminiKeyInput');
+      const elUrl = document.getElementById('customBackendUrlInput');
+      const elM1 = document.getElementById('customMetaToken1Input');
+      const elM2 = document.getElementById('customMetaToken2Input');
+      const elTg = document.getElementById('customTgConfigInput');
+
+      if (elKey) elKey.value = customKey;
+      if (elUrl) elUrl.value = customUrl;
+      if (elM1) elM1.value = customMeta1;
+      if (elM2) elM2.value = customMeta2;
+      if (elTg) elTg.value = customTg;
+
+      const keyBadge = document.getElementById('apiKeyStatusBadge');
+      if (keyBadge) {
+        if (customKey) {
+          keyBadge.innerText = 'Gemini API ulangan';
+          keyBadge.className = 'px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[11px] font-mono';
+        } else {
+          keyBadge.innerText = 'Kalit kiritilmagan';
+          keyBadge.className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-darkBorder text-[11px] font-mono';
+        }
+      }
+
+      const metaBadge = document.getElementById('metaAdsConnBadge');
+      if (metaBadge) {
+        if (customMeta1 || customMeta2) {
+          metaBadge.innerText = 'Meta Token ulangan';
+          metaBadge.className = 'px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-xs font-medium';
+        } else {
+          metaBadge.innerText = 'Meta Token kiritilmagan';
+          metaBadge.className = 'px-2.5 py-1 rounded bg-slate-500/10 text-slate-400 border border-slate-500/20 text-xs font-medium';
+        }
+      }
+    }
+
+    // =========================================================================
+    // 4. AKKAUNTLAR, MIJOZ QO'SHISH VA JAMOA XODIMLARINI BOSHQARISH
+    // =========================================================================
+    function openNewLeadModal() {
+      const modal = document.getElementById('newLeadModal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+    }
+
+    function closeNewLeadModal() {
+      const modal = document.getElementById('newLeadModal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+    }
+
+    function createManualLead(e) {
+      e.preventDefault();
+      const name = document.getElementById('newLeadNameInput').value.trim();
+      if (!name) return;
+      const username = (document.getElementById('newLeadUserInput').value.trim() || name.toLowerCase().replace(/\s+/g, '_')).replace(/^@/, '');
+      const phone = document.getElementById('newLeadPhoneInput').value.trim();
+      const service = document.getElementById('newLeadServiceInput').value.trim();
+      const amount = Number(document.getElementById('newLeadAmountInput').value) || 0;
+      const firstMsg = document.getElementById('newLeadFirstMsgInput').value.trim();
+      const timeNow = new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+
+      const newLead = {
+        id: 'lead_' + Date.now(),
+        igId: '',
+        name,
+        username,
+        account: state.selectedAccount,
+        status: 'new',
+        priority: 'medium',
+        assignee: state.currentOperator,
+        phone,
+        service,
+        amount,
+        eventDate: '',
+        paymentStatus: 'unpaid',
+        followUp: '',
+        adCampaign: '',
+        notes: '',
+        unread: true,
+        messages: firstMsg ? [{ sender: 'user', text: firstMsg, time: timeNow }] : []
+      };
+
+      state.leads.unshift(newLead);
+      saveState();
+      e.target.reset();
+      closeNewLeadModal();
+      refreshAllViews();
+      selectLead(newLead.id, true);
+      showToast(`${name} (${state.selectedAccount}) qo'shildi`, "success");
+
+      const backendUrl = getBackendUrl();
+      if (backendUrl) {
+        fetch(`${backendUrl}/api/leads`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newLead)
+        }).catch(() => {});
+      }
+    }
+
+    function addInstagramAccount() {
+      const input = document.getElementById('newAccountInput');
+      if (!input) return;
+      let val = input.value.trim();
+      if (!val) return;
+      if (!val.startsWith('@')) val = '@' + val;
+      if (!state.accounts.includes(val)) {
+        state.accounts.push(val);
+        state.selectedAccount = val;
+        saveState();
+        renderAccountsAndOperatorsUI();
+        refreshAllViews();
+        showToast(`${val} sahifasi qo'shildi`, "success");
+      }
+      input.value = '';
+    }
+
+    function removeInstagramAccount(idx) {
+      if (state.accounts.length <= 1) return;
+      const removed = state.accounts.splice(idx, 1)[0];
+      if (state.selectedAccount === removed) {
+        state.selectedAccount = state.accounts[0];
+      }
+      saveState();
+      renderAccountsAndOperatorsUI();
+      refreshAllViews();
+      showToast(`${removed} o'chirildi`, "info");
+    }
+
+    function addTeamOperator() {
+      const input = document.getElementById('newOperatorInput');
+      if (!input) return;
+      const val = input.value.trim();
+      if (!val) return;
+      if (!state.operators.includes(val)) {
+        state.operators.push(val);
+        saveState();
+        renderAccountsAndOperatorsUI();
+        showToast(`${val} jamoaga qo'shildi`, "success");
+      }
+      input.value = '';
+    }
+
+    function removeTeamOperator(idx) {
+      if (state.operators.length <= 1) return;
+      const removed = state.operators.splice(idx, 1)[0];
+      if (state.currentOperator === removed) {
+        state.currentOperator = state.operators[0];
+      }
+      saveState();
+      renderAccountsAndOperatorsUI();
+      showToast(`${removed} o'chirildi`, "info");
+    }
+
+    function renderAccountsAndOperatorsUI() {
+      // Header account switcher
+      const accSelect = document.getElementById('accountSwitcher');
+      if (accSelect) {
+        accSelect.innerHTML = state.accounts.map(a =>
+          `<option value="${a}" ${a === state.selectedAccount ? 'selected' : ''} class="bg-darkCard text-white">${a}</option>`
+        ).join('');
+      }
+
+      // Settings accounts list
+      const accList = document.getElementById('accountsManageList');
+      if (accList) {
+        accList.innerHTML = state.accounts.map((a, i) => `
+          <div class="flex items-center justify-between px-3 py-1.5 rounded bg-slate-100 dark:bg-darkBg border border-slate-200 dark:border-darkBorder text-xs font-mono">
+            <span>${a}</span>
+            ${state.accounts.length > 1 ? `<button onclick="removeInstagramAccount(${i})" class="text-slate-500 hover:text-red-400"><i class="fa-solid fa-trash-can"></i></button>` : ''}
+          </div>
+        `).join('');
+      }
+
+      // Operators selects (Header, Filter, Chat Assignee)
+      const opOptions = state.operators.map(o =>
+        `<option value="${o}" ${o === state.currentOperator ? 'selected' : ''} class="bg-darkCard text-white">${o}</option>`
+      ).join('');
+      const curOpSel = document.getElementById('currentOperatorSelect');
+      if (curOpSel) curOpSel.innerHTML = opOptions;
+
+      const filterSel = document.getElementById('operatorFilterSelect');
+      if (filterSel) {
+        filterSel.innerHTML = `<option value="all">Barcha xodim</option>` + state.operators.map(o =>
+          `<option value="${o}">${o.split(' ')[0]}</option>`
+        ).join('');
+      }
+
+      const chatAssSel = document.getElementById('chatAssigneeSelect');
+      if (chatAssSel) {
+        chatAssSel.innerHTML = state.operators.map(o =>
+          `<option value="${o}">Mas'ul: ${o.split(' ')[0]}</option>`
+        ).join('');
+      }
+
+      // Settings operators list
+      const opList = document.getElementById('operatorsManageList');
+      if (opList) {
+        opList.innerHTML = state.operators.map((o, i) => `
+          <div class="flex items-center justify-between px-3 py-1.5 rounded bg-slate-100 dark:bg-darkBg border border-slate-200 dark:border-darkBorder text-xs">
+            <span>${o}</span>
+            ${state.operators.length > 1 ? `<button onclick="removeTeamOperator(${i})" class="text-slate-500 hover:text-red-400"><i class="fa-solid fa-trash-can"></i></button>` : ''}
+          </div>
+        `).join('');
+      }
+    }
+
+    async function syncWithBackendServer(manualNotify = false) {
+      const backendUrl = getBackendUrl();
+      const badge = document.getElementById('serverStatusBadge');
+      if (!backendUrl) {
+        if (manualNotify) showToast("Avval Backend Server URL kiriting", "info");
+        return;
+      }
+      try {
+        const res = await fetch(`${backendUrl}/api/leads`);
+        if (!res.ok) throw new Error("Server error");
+        const serverLeads = await res.json();
+        if (Array.isArray(serverLeads)) {
+          state.leads = serverLeads.map(sl => ({ ...sl, id: sl._id || sl.id }));
+          saveState();
+          refreshAllViews();
+          if (state.activeLeadId) renderChatWindow();
+        }
+        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-dot"></span> Server ulangan`;
+        badge.className = "hidden md:inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-medium";
+        if (manualNotify) showToast("Server bilan sinxronlandi", "success");
+      } catch (err) {
+        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Server aloqa yo'q`;
+        badge.className = "hidden md:inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20 font-medium";
+        if (manualNotify) showToast("Serverga ulanib bo'lmadi", "info");
+      }
+    }
+
+    function resetAllSystemData() {
+      localStorage.removeItem('instacrm_prod_v1');
+      state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+      saveState();
+      renderAccountsAndOperatorsUI();
+      renderQuickReplies();
+      renderModalTemplates();
+      renderNotifications();
+      document.getElementById('activeChatContainer').classList.add('hidden');
+      document.getElementById('emptyChatState').classList.remove('hidden');
+      document.getElementById('activeCrmInfo').classList.add('hidden');
+      document.getElementById('emptyCrmInfo').classList.remove('hidden');
+      refreshAllViews();
+      showToast("Barcha ma'lumotlar tozalandi", "info");
+    }
+
+    // =========================================================================
+    // 6. OPERATOR BOSHQARUVI VA YOZISH REJIMI
+    // =========================================================================
+    function switchCurrentOperator(op) {
+      state.currentOperator = op;
+      saveState();
+      showToast(`Aktiv xodim: ${op}`, "info");
+    }
+
+    function updateLeadAssignee(newAssignee) {
+      const lead = state.leads.find(l => l.id === state.activeLeadId);
+      if (!lead) return;
+      lead.assignee = newAssignee;
+      saveState();
+      renderLeads();
+      syncLeadUpdate(lead);
+      showToast(`Mas'ul: ${newAssignee}`, "success");
+    }
+
+    function setChatWriteMode(mode) {
+      state.writeMode = mode;
+      const dBtn = document.getElementById('modeDirectBtn');
+      const iBtn = document.getElementById('modeInternalBtn');
+      const input = document.getElementById('messageInput');
+      const submitBtn = document.getElementById('sendMsgSubmitBtn');
+      const hint = document.getElementById('writeModeHint');
+
+      if (mode === 'internal') {
+        iBtn.className = 'px-2.5 py-1 rounded bg-amber-600 text-white font-medium transition';
+        dBtn.className = 'px-2.5 py-1 rounded bg-slate-100 dark:bg-darkElevated text-slate-400 hover:text-white border border-slate-200 dark:border-darkBorder font-medium transition';
+        input.placeholder = "Ichki eslatma yozing (mijozga ko'rinmaydi)...";
+        submitBtn.className = 'px-4 py-2 rounded-md bg-amber-600 hover:bg-amber-500 text-white font-medium text-xs sm:text-sm transition flex items-center gap-1.5 shrink-0';
+        hint.innerText = "Faqat jamoa xodimlari ko'radi";
+      } else {
+        dBtn.className = 'px-2.5 py-1 rounded bg-sky-600 text-white font-medium transition';
+        iBtn.className = 'px-2.5 py-1 rounded bg-slate-100 dark:bg-darkElevated text-slate-400 hover:text-white border border-slate-200 dark:border-darkBorder font-medium transition';
+        input.placeholder = "Mijozga javob yozing...";
+        submitBtn.className = 'px-4 py-2 rounded-md bg-sky-600 hover:bg-sky-500 text-white font-medium text-xs sm:text-sm transition flex items-center gap-1.5 shrink-0';
+        hint.innerText = "Xabar to'g'ridan-to'g'ri Instagram Direct'ga ketadi";
+      }
+    }
+
+    // =========================================================================
+    // 7. NAVIGATSIYA VA TOAST
+    // =========================================================================
+    function switchMainTab(tabName) {
+      state.currentTab = tabName;
+      document.querySelectorAll('.main-view').forEach(v => v.classList.add('hidden'));
+      document.getElementById('view-' + tabName).classList.remove('hidden');
+
+      document.querySelectorAll('.nav-rail-btn').forEach(btn => {
+        btn.className = 'nav-rail-btn w-10 h-10 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-darkElevated hover:text-slate-900 dark:hover:text-white flex flex-col items-center justify-center gap-0.5 transition';
+      });
+      document.getElementById('nav-' + tabName).className = 'nav-rail-btn w-10 h-10 rounded-lg bg-slate-900 dark:bg-slate-800 text-white flex flex-col items-center justify-center gap-0.5 transition';
+
+      if (tabName === 'kanban') renderKanban();
+      if (tabName === 'database') renderDatabaseTable();
+      if (tabName === 'ads') renderAdsTab();
+      if (tabName === 'broadcast') {
+        updateBroadcastRecipientCount();
+        renderBroadcastHistory();
+      }
+    }
+
+    function switchInstagramAccount(acc) {
+      state.selectedAccount = acc;
+      state.activeLeadId = null;
+      saveState();
+
+      // Aktiv chatni yopib, yangi tanlangan akkaunt ro'yxatini ko'rsatish
+      const activeChat = document.getElementById('activeChatContainer');
+      const emptyChat = document.getElementById('emptyChatState');
+      const activeCrm = document.getElementById('activeCrmInfo');
+      const emptyCrm = document.getElementById('emptyCrmInfo');
+      if (activeChat) activeChat.classList.add('hidden');
+      if (emptyChat) emptyChat.classList.remove('hidden');
+      if (activeCrm) activeCrm.classList.add('hidden');
+      if (emptyCrm) emptyCrm.classList.remove('hidden');
+
+      refreshAllViews();
+      showToast(`Sahifa almashtirildi: ${acc}`, "info");
+    }
+
+    function showToast(msg, type = 'info') {
+      const box = document.getElementById('toastBox');
+      const colors = {
+        info: 'bg-slate-800 text-white border border-slate-700',
+        success: 'bg-emerald-700 text-white border border-emerald-600',
+        ai: 'bg-sky-700 text-white border border-sky-600'
+      };
+      const el = document.createElement('div');
+      el.className = `${colors[type] || colors.info} px-3.5 py-2 rounded-md text-xs font-medium shadow-lg flex items-center gap-2 transition-all duration-300`;
+      el.innerHTML = `<span>${msg}</span>`;
+      box.appendChild(el);
+      setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3000);
+    }
+
+    // =========================================================================
+    // 8. KPI STATISTIKA VA MIJOZLAR RO'YXATI
+    // =========================================================================
+    function getAccountLeads() {
+      return state.leads.filter(l => (l.account || state.accounts[0]) === state.selectedAccount);
+    }
+
+    function updateKPIs() {
+      const accLeads = getAccountLeads();
+      const total = accLeads.length;
+      const newCount = accLeads.filter(l => l.status === 'new').length;
+      const wonList = accLeads.filter(l => l.status === 'won');
+      const rev = wonList.reduce((s, l) => s + (Number(l.amount) || 0), 0);
+      const conv = total > 0 ? Math.round((wonList.length / total) * 100) : 0;
+
+      const setElText = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = val;
+      };
+
+      setElText('statTotal', total);
+      setElText('statNew', newCount);
+      setElText('statWon', wonList.length);
+      setElText('statConv', conv + '%');
+      setElText('statRevenue', rev.toLocaleString('uz-UZ') + " so'm");
+    }
+
+    function renderLeads() {
+      const list = document.getElementById('leadsList');
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      const opFilter = document.getElementById('operatorFilterSelect')?.value || 'all';
+
+      const badges = {
+        new: '<span class="px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-500 text-[10px] font-medium">Yangi</span>',
+        talking: '<span class="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 text-[10px] font-medium">Jarayonda</span>',
+        pending: '<span class="px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 text-[10px] font-medium">To\'lov</span>',
+        won: '<span class="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 text-[10px] font-medium">Yopilgan</span>',
+        lost: '<span class="px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 text-[10px] font-medium">Bekor</span>'
+      };
+
+      const filtered = getAccountLeads().filter(l => {
+        const matchSearch = l.name.toLowerCase().includes(q) || l.username.toLowerCase().includes(q) || (l.phone && l.phone.includes(q));
+        const matchFilter = state.filter === 'all' || l.status === state.filter;
+        const matchOp = opFilter === 'all' || l.assignee === opFilter;
+        return matchSearch && matchFilter && matchOp;
+      });
+
+      list.innerHTML = filtered.map(lead => {
+        const last = lead.messages[lead.messages.length - 1];
+        const active = lead.id === state.activeLeadId;
+        const prefix = last ? (last.sender === 'internal' ? '[Ichki]: ' : (last.sender !== 'user' ? 'Siz: ' : '')) : '';
+        const shortOp = (lead.assignee || state.currentOperator).split(' ')[0];
+        return `
+          <div onclick="selectLead('${lead.id}', true)" class="p-3 cursor-pointer transition flex items-start gap-3 ${active ? 'bg-slate-100 dark:bg-darkElevated border-l-2 border-sky-500' : 'hover:bg-slate-50 dark:hover:bg-darkElevated/40'}">
+            <div class="w-9 h-9 rounded-full corp-avatar flex items-center justify-center font-semibold text-xs shrink-0 relative">
+              ${lead.name.charAt(0).toUpperCase()}
+              ${lead.unread ? '<span class="w-2.5 h-2.5 bg-sky-500 border-2 border-darkCard rounded-full absolute -top-0.5 -right-0.5"></span>' : ''}
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between gap-1">
+                <h4 class="font-medium text-xs truncate">${lead.name}</h4>
+                <span class="text-[10px] font-mono text-slate-400 shrink-0">${last ? last.time : ''}</span>
+              </div>
+              <p class="text-[11px] text-slate-500 truncate mt-0.5">${last ? prefix + last.text : 'Xabarlar yo\'q'}</p>
+              <div class="flex items-center justify-between mt-1.5">
+                <span class="text-[10px] text-slate-400 truncate max-w-[140px]">${shortOp} • ${lead.account || ''}</span>
+                ${badges[lead.status] || ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('') || `<div class="p-8 text-center text-xs text-slate-500">Hozircha mijozlar yo'q</div>`;
+    }
+
+    function selectLead(id, openMobile = false) {
+      state.activeLeadId = id;
+      const lead = state.leads.find(l => l.id === id);
+      if (!lead) return;
+      lead.unread = false;
+      saveState();
+
+      if (openMobile) {
+        document.getElementById('sidebarPanel').classList.add('hidden', 'md:flex');
+        document.getElementById('chatPanel').classList.remove('hidden');
+        document.getElementById('chatPanel').classList.add('flex');
+      }
+
+      document.getElementById('emptyChatState').classList.add('hidden');
+      document.getElementById('activeChatContainer').classList.remove('hidden');
+      document.getElementById('emptyCrmInfo').classList.add('hidden');
+      document.getElementById('activeCrmInfo').classList.remove('hidden');
+      document.getElementById('aiSuggestionsBar').classList.add('hidden');
+
+      renderLeads();
+      renderChatWindow();
+    }
+
+    function closeMobileChat() {
+      document.getElementById('sidebarPanel').classList.remove('hidden');
+      document.getElementById('chatPanel').classList.add('hidden');
+    }
+
+    function renderChatWindow() {
+      const lead = state.leads.find(l => l.id === state.activeLeadId);
+      if (!lead) return;
+
+      document.getElementById('chatAvatar').innerText = lead.name.charAt(0).toUpperCase();
+      document.getElementById('chatName').innerText = lead.name;
+      document.getElementById('chatUsername').innerText = '@' + lead.username;
+      document.getElementById('chatAccountTag').innerText = lead.account || state.selectedAccount;
+      document.getElementById('chatStatusSelect').value = lead.status;
+      document.getElementById('chatAssigneeSelect').value = lead.assignee || state.currentOperator;
+
+      document.getElementById('crmPriority').value = lead.priority || 'medium';
+      document.getElementById('crmPhone').value = lead.phone || '';
+      document.getElementById('crmService').value = lead.service || '';
+      document.getElementById('crmAmount').value = lead.amount || '';
+      document.getElementById('crmEventDate').value = lead.eventDate || '';
+      document.getElementById('crmPaymentStatus').value = lead.paymentStatus || 'unpaid';
+      document.getElementById('crmFollowUp').value = lead.followUp || '';
+      document.getElementById('crmNotes').value = lead.notes || '';
+      document.getElementById('crmAdCampaignInput').value = lead.adCampaign || '';
+
+      const box = document.getElementById('messagesContainer');
+      if (lead.messages.length === 0) {
+        box.innerHTML = `<div class="text-center text-xs text-slate-500 my-auto py-10">Suhbat tarixi bo'sh. Mijozga xabar yozishingiz mumkin.</div>`;
+        return;
+      }
+
+      box.innerHTML = lead.messages.map(m => {
+        if (m.sender === 'internal') {
+          return `
+            <div class="flex justify-center my-1">
+              <div class="max-w-[85%] px-3 py-1.5 rounded-md bg-amber-500/10 border border-amber-500/25 text-amber-200 text-[11px] flex items-center gap-2">
+                <i class="fa-solid fa-lock text-amber-500 text-[10px]"></i>
+                <span>${m.text}</span>
+                <span class="font-mono text-[9px] text-amber-400/70">${m.time}</span>
+              </div>
+            </div>
+          `;
+        } else if (m.sender === 'user') {
+          return `
+            <div class="flex justify-start">
+              <div class="max-w-[78%] px-3.5 py-2 rounded-lg bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder text-xs leading-relaxed">
+                <p class="whitespace-pre-line">${m.text}</p>
+                <span class="block text-[9px] font-mono text-slate-400 mt-1">${m.time}</span>
+              </div>
+            </div>
+          `;
+        } else {
+          return `
+            <div class="flex justify-end">
+              <div class="max-w-[78%] px-3.5 py-2 rounded-lg bg-sky-600 text-white text-xs leading-relaxed">
+                <p class="whitespace-pre-line">${m.text}</p>
+                <div class="flex items-center justify-end gap-1.5 mt-1 text-[9px] font-mono text-sky-100">
+                  <span>${m.time}</span>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+      }).join('');
+      box.scrollTop = box.scrollHeight;
+    }
+
+    // =========================================================================
+    // 9. XABAR YUBORISH VA GEMINI AI YORDAMCHI
+    // =========================================================================
+    async function sendAdminMessage(e) {
+      e.preventDefault();
+      const input = document.getElementById('messageInput');
+      const text = input.value.trim();
+      if (!text || !state.activeLeadId) return;
+
+      const lead = state.leads.find(l => l.id === state.activeLeadId);
+      const timeNow = new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+      const isInternal = state.writeMode === 'internal';
+
+      if (isInternal) {
+        const opShort = state.currentOperator.split(' ')[0];
+        lead.messages.push({ sender: 'internal', text: `${opShort}: ${text}`, time: timeNow });
+      } else {
+        lead.messages.push({ sender: 'admin', text, time: timeNow });
+        if (lead.status === 'new') lead.status = 'talking';
+      }
+
+      input.value = '';
+      document.getElementById('aiSuggestionsBar').classList.add('hidden');
+      saveState();
+      refreshAllViews();
+      renderChatWindow();
+
+      const backendUrl = getBackendUrl();
+      if (backendUrl) {
+        fetch(`${backendUrl}/api/send-message`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ leadId: lead.id, igId: lead.igId, text, internal: isInternal })
+        }).catch(() => {});
+      }
+    }
+
+    async function generate3AiCopilotSuggestions() {
+      const lead = state.leads.find(l => l.id === state.activeLeadId);
+      if (!lead) return;
+
+      if (!getActiveGeminiKey()) {
+        showToast("Avval Sozlamalar bo'limida Gemini API kalitini kiriting", "info");
+        switchMainTab('settings');
+        return;
+      }
+
+      const btn = document.getElementById('aiDraftBtn');
+      const oldHtml = btn.innerHTML;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-sky-500"></i> <span>Tayyorlanmoqda...</span>`;
+      btn.disabled = true;
+
+      try {
+        const history = lead.messages.filter(m => m.sender !== 'internal').map(m => `${m.sender === 'user' ? 'Mijoz' : 'Menejer'}: ${m.text}`).join('\n');
+        const prompt = `Sen tirik o'zbek sotuvchi menejerisan. Quyidagi Instagram Direct suhbatini o'qib, mijozga yozish uchun 3 xil TABIIY, QISQA va ODAMGA O'XSHAGAN javob variantini tuz.
+Suhbat:
+${history || 'Mijoz endi murojaat qildi'}
+
+Bilimlar bazasi:
+${state.knowledgeBase || 'Mijoz bilan samimiy muloqot qilib, ehtiyojini aniqlang.'}
+
+JSON formatda qaytar:
+{
+  "suggestions": [
+    "1-variant",
+    "2-variant",
+    "3-variant"
+  ]
+}`;
+        const res = await callGeminiAPI(prompt, true);
+        const bar = document.getElementById('aiSuggestionsBar');
+        const container = document.getElementById('aiChipsContainer');
+        container.innerHTML = (res.suggestions || []).map((s, i) => `
+          <button type="button" onclick="applyAiChip(${i})" data-text="${s.replace(/"/g, '&quot;')}"
+            class="ai-chip-btn text-left px-2.5 py-1.5 rounded-md bg-white dark:bg-darkCard hover:border-sky-500 border border-slate-200 dark:border-darkBorder text-[11px] text-slate-700 dark:text-slate-200 transition">
+            <span class="font-mono text-sky-500 mr-1">${i + 1}.</span> ${s}
+          </button>
+        `).join('');
+        bar.classList.remove('hidden');
+        showToast("Javob variantlari tayyor", "ai");
+      } catch (err) {
+        showToast("Gemini API bilan bog'lanishda xatolik", "info");
+      } finally {
+        btn.innerHTML = oldHtml;
+        btn.disabled = false;
+      }
+    }
+
+    function applyAiChip(idx) {
+      const btns = document.querySelectorAll('.ai-chip-btn');
+      if (btns[idx]) {
+        const input = document.getElementById('messageInput');
+        input.value = btns[idx].getAttribute('data-text');
+        input.focus();
+      }
+    }
+
+    async function runAiCrmExtraction() {
+      const lead = state.leads.find(l => l.id === state.activeLeadId);
+      if (!lead) return;
+
+      if (!getActiveGeminiKey()) {
+        showToast("Avval Sozlamalar bo'limida Gemini API kalitini kiriting", "info");
+        return;
+      }
+
+      const btn = document.getElementById('aiExtractBtn');
+      const oldHtml = btn.innerHTML;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-sky-500"></i> <span>Tahlil qilinmoqda...</span>`;
+      btn.disabled = true;
+
+      try {
+        const history = lead.messages.map(m => `${m.sender}: ${m.text}`).join('\n');
+        const prompt = `Suhbatdan mijozning ma'lumotlarini ajratib ol:
+${history}
+JSON qaytar:
+{
+  "phone": "telefon raqam",
+  "service": "xizmat nomi",
+  "amount": 0,
+  "eventDate": "sana",
+  "notes": "qisqa eslatma",
+  "status": "new | talking | pending | won"
+}`;
+        const res = await callGeminiAPI(prompt, true);
+        if (res.phone) lead.phone = res.phone;
+        if (res.service) lead.service = res.service;
+        if (res.amount) lead.amount = res.amount;
+        if (res.eventDate) lead.eventDate = res.eventDate;
+        if (res.notes) lead.notes = res.notes;
+        if (res.status) lead.status = res.status;
+
+        saveState();
+        syncLeadUpdate(lead);
+        refreshAllViews();
+        renderChatWindow();
+        showToast("Mijoz kartasi yangilandi", "ai");
+      } catch (err) {
+        showToast("Tahlil qilishda xatolik", "info");
+      } finally {
+        btn.innerHTML = oldHtml;
+        btn.disabled = false;
+      }
+    }
+
+    // =========================================================================
+    // 10. CRM KARTA FUNKSIYALARI
+    // =========================================================================
+    function syncLeadUpdate(lead) {
+      const backendUrl = getBackendUrl();
+      if (!backendUrl) return;
+      fetch(`${backendUrl}/api/leads/${lead.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(lead)
+      }).catch(() => {});
+    }
+
+    function copyClientPhone() {
+      const phone = document.getElementById('crmPhone').value.trim();
+      if (!phone) return showToast("Telefon raqam kiritilmagan", "info");
+      const temp = document.createElement('input');
+      temp.value = phone;
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand('copy');
+      temp.remove();
+      showToast(`Nusxalandi: ${phone}`, "success");
+    }
+
+    function openClientTelegram() {
+      const phone = document.getElementById('crmPhone').value.replace(/\D/g, '');
+      if (!phone) return showToast("Avval telefon raqam kiriting", "info");
+      window.open(`https://t.me/+${phone}`, '_blank');
+    }
+
+    function setQuickFollowUp() {
+      const lead = state.leads.find(l => l.id === state.activeLeadId);
+      if (!lead) return;
+      const nextHour = new Date(Date.now() + 3600000).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+      lead.followUp = `Bugun, ${nextHour}`;
+      document.getElementById('crmFollowUp').value = lead.followUp;
+      saveState();
+      syncLeadUpdate(lead);
+      showToast(`Qayta aloqa: ${lead.followUp}`, "info");
+    }
+
+    function updateCurrentLeadStatus(newStatus) {
+      const lead = state.leads.find(l => l.id === state.activeLeadId);
+      if (!lead) return;
+      lead.status = newStatus;
+      saveState();
+      syncLeadUpdate(lead);
+      refreshAllViews();
+    }
+
+    function saveCrmDetails() {
+      const lead = state.leads.find(l => l.id === state.activeLeadId);
+      if (!lead) return;
+      lead.priority = document.getElementById('crmPriority').value;
+      lead.phone = document.getElementById('crmPhone').value;
+      lead.service = document.getElementById('crmService').value;
+      lead.amount = Number(document.getElementById('crmAmount').value) || 0;
+      lead.eventDate = document.getElementById('crmEventDate').value;
+      lead.paymentStatus = document.getElementById('crmPaymentStatus').value;
+      lead.followUp = document.getElementById('crmFollowUp').value;
+      lead.notes = document.getElementById('crmNotes').value;
+      lead.adCampaign = document.getElementById('crmAdCampaignInput').value;
+      saveState();
+      syncLeadUpdate(lead);
+      refreshAllViews();
+    }
+
+    function deleteCurrentLead() {
+      const deletedId = state.activeLeadId;
+      state.leads = state.leads.filter(l => l.id !== deletedId);
+      state.activeLeadId = state.leads[0]?.id || null;
+      saveState();
+      refreshAllViews();
+
+      const backendUrl = getBackendUrl();
+      if (backendUrl && deletedId) {
+        fetch(`${backendUrl}/api/leads/${deletedId}`, { method: 'DELETE' }).catch(() => {});
+      }
+
+      if (state.activeLeadId) renderChatWindow();
+      else {
+        document.getElementById('activeChatContainer').classList.add('hidden');
+        document.getElementById('emptyChatState').classList.remove('hidden');
+        document.getElementById('activeCrmInfo').classList.add('hidden');
+        document.getElementById('emptyCrmInfo').classList.remove('hidden');
+      }
+      showToast("Mijoz o'chirildi", "info");
+    }
+
+    // =========================================================================
+    // 11. KANBAN, TARGET ADS VA BAZA EKSPORT
+    // =========================================================================
+    function renderKanban() {
+      const board = document.getElementById('kanbanBoard');
+      const stages = [
+        { id: 'new', title: 'Yangi murojaatlar', color: 'border-sky-500' },
+        { id: 'talking', title: 'Muhokamada', color: 'border-amber-500' },
+        { id: 'pending', title: 'To\'lov kutilmoqda', color: 'border-orange-500' },
+        { id: 'won', title: 'Shartnoma yopilgan', color: 'border-emerald-500' },
+        { id: 'lost', title: 'Bekor qilingan', color: 'border-red-500' }
+      ];
+
+      board.innerHTML = stages.map(stage => {
+        const items = getAccountLeads().filter(l => l.status === stage.id);
+        const sum = items.reduce((acc, l) => acc + (Number(l.amount) || 0), 0);
+        return `
+          <div class="w-72 shrink-0 bg-white dark:bg-darkCard border border-slate-200 dark:border-darkBorder rounded-lg flex flex-col max-h-full">
+            <div class="p-3 border-t-2 ${stage.color} border-b border-slate-200 dark:border-darkBorder flex items-center justify-between">
+              <div>
+                <h3 class="font-semibold text-xs">${stage.title}</h3>
+                <p class="text-[11px] font-mono text-slate-400 mt-0.5">${sum.toLocaleString('uz-UZ')} so'm</p>
+              </div>
+              <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-darkElevated text-xs font-mono font-semibold">${items.length}</span>
+            </div>
+            <div class="p-2.5 space-y-2 overflow-y-auto flex-1">
+              ${items.map(l => `
+                <div class="p-3 rounded-md bg-slate-50 dark:bg-darkElevated border border-slate-200 dark:border-darkBorder space-y-2 hover:border-slate-400 transition">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-mono text-slate-400">${(l.assignee || state.currentOperator).split(' ')[0]}</span>
+                    <span class="text-[10px] font-mono font-semibold text-slate-200">${(Number(l.amount) || 0).toLocaleString('uz-UZ')} so'm</span>
+                  </div>
+                  <div>
+                    <h4 class="font-semibold text-xs">${l.name}</h4>
+                    <p class="text-[11px] text-slate-400 truncate">${l.service || 'Xizmat belgilanmagan'}</p>
+                  </div>
+                  <div class="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-darkBorder">
+                    <button onclick="openLeadFromAnywhere('${l.id}')" class="text-[11px] text-sky-500 hover:underline font-medium">
+                      Suhbatni ochish
+                    </button>
+                    <select onchange="moveLeadStage('${l.id}', this.value)" class="text-[10px] bg-darkBg border border-darkBorder rounded px-1.5 py-0.5 text-slate-300">
+                      <option value="new" ${l.status === 'new' ? 'selected' : ''}>Yangi</option>
+                      <option value="talking" ${l.status === 'talking' ? 'selected' : ''}>Jarayonda</option>
+                      <option value="pending" ${l.status === 'pending' ? 'selected' : ''}>To'lov</option>
+                      <option value="won" ${l.status === 'won' ? 'selected' : ''}>Yopilgan</option>
+                      <option value="lost" ${l.status === 'lost' ? 'selected' : ''}>Bekor</option>
+                    </select>
+                  </div>
+                </div>
+              `).join('') || `<div class="text-center text-[11px] text-slate-500 py-8">Mijozlar yo'q</div>`}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function moveLeadStage(id, newStatus) {
+      const lead = state.leads.find(l => l.id === id);
+      if (lead) {
+        lead.status = newStatus;
+        saveState();
+        syncLeadUpdate(lead);
+        refreshAllViews();
+      }
+    }
+
+    function openLeadFromAnywhere(id) {
+      switchMainTab('chat');
+      selectLead(id, true);
+    }
+
+    function addAdCampaign(e) {
+      e.preventDefault();
+      const name = document.getElementById('newCampName').value.trim();
+      const spend = Number(document.getElementById('newCampSpend').value) || 0;
+      const leadsCount = Number(document.getElementById('newCampLeads').value) || 0;
+      if (!name) return;
+
+      state.campaigns.push({
+        id: 'camp_' + Date.now(),
+        name,
+        account: state.selectedAccount,
+        spend,
+        leads: leadsCount
+      });
+      saveState();
+      e.target.reset();
+      renderAdsTab();
+      showToast("Reklama kampaniyasi qo'shildi", "success");
+    }
+
+    function removeAdCampaign(idx) {
+      state.campaigns.splice(idx, 1);
+      saveState();
+      renderAdsTab();
+    }
+
+    function renderAdsTab() {
+      const accCampaigns = state.campaigns.filter(c => (c.account || state.accounts[0]) === state.selectedAccount);
+      const accLeads = getAccountLeads();
+      const totalSpend = accCampaigns.reduce((s, c) => s + c.spend, 0);
+      const totalCampLeads = accCampaigns.reduce((s, c) => s + c.leads, 0);
+      const avgCpl = totalCampLeads > 0 ? (totalSpend / totalCampLeads) : 0;
+
+      const wonList = accLeads.filter(l => l.status === 'won');
+      const totalRev = wonList.reduce((s, l) => s + (Number(l.amount) || 0), 0);
+      const conv = accLeads.length > 0 ? Math.round((wonList.length / accLeads.length) * 100) : 0;
+
+      document.getElementById('adsTotalSpend').innerText = `$${totalSpend.toFixed(2)}`;
+      document.getElementById('adsAvgCpl').innerText = `O'rtacha CPL: $${avgCpl.toFixed(2)}`;
+      document.getElementById('adsTotalLeads').innerText = accLeads.length;
+      document.getElementById('adsWonDeals').innerText = wonList.length;
+      document.getElementById('adsConvRate').innerText = `Konversiya: ${conv}%`;
+      document.getElementById('adsTotalRev').innerText = `${totalRev.toLocaleString('uz-UZ')} so'm`;
+
+      const tbody = document.getElementById('campaignsTableBody');
+      tbody.innerHTML = state.campaigns.map((c, i) => {
+        if ((c.account || state.accounts[0]) !== state.selectedAccount) return '';
+        const cpl = c.leads > 0 ? (c.spend / c.leads).toFixed(2) : '0.00';
+        return `
+          <tr>
+            <td class="py-3 font-medium">${c.name}</td>
+            <td class="py-3 font-mono text-slate-400">${c.account}</td>
+            <td class="py-3 font-mono">$${c.spend.toFixed(2)}</td>
+            <td class="py-3 font-mono font-semibold">${c.leads}</td>
+            <td class="py-3 font-mono text-emerald-500">$${cpl}</td>
+            <td class="py-3">
+              <button onclick="removeAdCampaign(${i})" class="text-slate-500 hover:text-red-400"><i class="fa-solid fa-trash-can"></i></button>
+            </td>
+          </tr>
+        `;
+      }).join('') || `<tr><td colspan="6" class="py-6 text-center text-slate-500">${state.selectedAccount} uchun reklama kampaniyalari kiritilmagan</td></tr>`;
+    }
+
+    function renderDatabaseTable() {
+      const tbody = document.getElementById('databaseTableBody');
+      const payLabels = {
+        unpaid: '<span class="text-slate-400">To\'lanmagan</span>',
+        advance: '<span class="text-amber-500">50% Avans</span>',
+        paid: '<span class="text-emerald-500 font-medium">To\'langan</span>'
+      };
+      tbody.innerHTML = getAccountLeads().map(l => `
+        <tr class="hover:bg-slate-50 dark:hover:bg-darkElevated/50">
+          <td class="p-3 font-medium">${l.name} <span class="block text-[10px] font-mono text-slate-400">${(l.assignee || state.currentOperator).split(' ')[0]} • @${l.username}</span></td>
+          <td class="p-3 font-mono text-slate-400">${l.account || ''}</td>
+          <td class="p-3 font-mono">${l.phone || '—'}</td>
+          <td class="p-3">${l.service || '—'}</td>
+          <td class="p-3">${l.eventDate || '—'}</td>
+          <td class="p-3 font-mono font-semibold">${(Number(l.amount) || 0).toLocaleString('uz-UZ')} so'm</td>
+          <td class="p-3">${payLabels[l.paymentStatus] || ''}</td>
+          <td class="p-3 uppercase font-mono text-[10px] text-slate-400">${l.status}</td>
+          <td class="p-3">
+            <button onclick="openLeadFromAnywhere('${l.id}')" class="px-2.5 py-1 rounded bg-slate-100 dark:bg-darkElevated border border-slate-200 dark:border-darkBorder hover:border-slate-400 text-xs transition">Ochish</button>
+          </td>
+        </tr>
+      `).join('') || `<tr><td colspan="9" class="p-8 text-center text-slate-500">Bazada mijozlar mavjud emas</td></tr>`;
+    }
+
+    function exportLeadsToCSV() {
+      if (state.leads.length === 0) return showToast("Eksport qilish uchun mijozlar yo'q", "info");
+      const headers = ['Ism', 'Username', 'Sahifa', 'Telefon', 'Xizmat', 'Muddat', 'Summa', 'Tolov', 'Holat'];
+      const rows = state.leads.map(l => [
+        `"${l.name}"`,
+        `"@${l.username}"`,
+        `"${l.account || ''}"`,
+        `"${l.phone || ''}"`,
+        `"${l.service || ''}"`,
+        `"${l.eventDate || ''}"`,
+        l.amount || 0,
+        `"${l.paymentStatus}"`,
+        `"${l.status}"`
+      ]);
+      const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `InstaCRM_Baza_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      showToast("CSV fayl yuklab olindi", "success");
+    }
+
+    function updateBroadcastRecipientCount() {
+      const target = document.getElementById('broadcastTargetStatus')?.value || 'all';
+      const accLeads = getAccountLeads();
+      const count = target === 'all'
+        ? accLeads.length
+        : accLeads.filter(l => l.status === target).length;
+      const label = document.getElementById('broadcastCountLabel');
+      if (label) label.innerText = `${count} ta mijoz (${state.selectedAccount})`;
+      return count;
+    }
+
+    async function sendMassBroadcast() {
+      const target = document.getElementById('broadcastTargetStatus').value;
+      const rawMsg = document.getElementById('broadcastMessageText').value.trim();
+      if (!rawMsg) return showToast("Xabar matnini kiriting", "info");
+
+      const accLeads = getAccountLeads();
+      const recipients = target === 'all'
+        ? accLeads
+        : accLeads.filter(l => l.status === target);
+
+      const timeNow = new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+      const backendUrl = getBackendUrl();
+
+      for (const lead of recipients) {
+        const personalText = rawMsg.replace(/\{ism\}/gi, lead.name.split(' ')[0]);
+        lead.messages.push({ sender: 'admin', text: personalText, time: timeNow });
+
+        if (backendUrl) {
+          fetch(`${backendUrl}/api/send-message`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ leadId: lead.id, igId: lead.igId, text: personalText, internal: false })
+          }).catch(() => {});
+        }
+      }
+
+      if (!state.broadcasts) state.broadcasts = [];
+      state.broadcasts.unshift({
+        id: 'bc_' + Date.now(),
+        text: rawMsg,
+        count: recipients.length,
+        time: new Date().toLocaleString('uz-UZ')
+      });
+
+      document.getElementById('broadcastMessageText').value = '';
+      saveState();
+      refreshAllViews();
+      renderBroadcastHistory();
+      showToast(`${recipients.length} ta mijozga xabar yuborildi`, "success");
+    }
+
+    function renderBroadcastHistory() {
+      const list = document.getElementById('broadcastHistoryList');
+      if (!list) return;
+      const items = state.broadcasts || [];
+      list.innerHTML = items.map(b => `
+        <div class="p-3 rounded-md bg-slate-50 dark:bg-darkBg border border-slate-200 dark:border-darkBorder flex items-center justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-slate-200 truncate">${b.text}</p>
+            <span class="text-[10px] font-mono text-slate-400">${b.time}</span>
+          </div>
+          <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-mono text-[11px] shrink-0">
+            ${b.count} ta mijozga
+          </span>
+        </div>
+      `).join('') || `<p class="text-slate-500 text-center py-4">Hozircha ommaviy xabar yuborilmagan</p>`;
+    }
+
+    // =========================================================================
+    // 12. SOZLAMALAR, API KALITLAR VA SHABLONLAR
+    // =========================================================================
+    function saveApiCredentials() {
+      const key = document.getElementById('customGeminiKeyInput').value.trim();
+      const url = document.getElementById('customBackendUrlInput').value.trim();
+      const meta1 = document.getElementById('customMetaToken1Input').value.trim();
+      const meta2 = document.getElementById('customMetaToken2Input').value.trim();
+      const tg = document.getElementById('customTgConfigInput').value.trim();
+
+      if (key) localStorage.setItem('instacrm_custom_gemini_key', key);
+      else localStorage.removeItem('instacrm_custom_gemini_key');
+
+      if (url) localStorage.setItem('instacrm_custom_backend_url', url);
+      else localStorage.removeItem('instacrm_custom_backend_url');
+
+      if (meta1) localStorage.setItem('instacrm_custom_meta_token_1', meta1);
+      else localStorage.removeItem('instacrm_custom_meta_token_1');
+
+      if (meta2) localStorage.setItem('instacrm_custom_meta_token_2', meta2);
+      else localStorage.removeItem('instacrm_custom_meta_token_2');
+
+      if (tg) localStorage.setItem('instacrm_custom_tg_config', tg);
+      else localStorage.removeItem('instacrm_custom_tg_config');
+
+      syncCredentialInputsUI();
+      showToast("Barcha API sozlamalari saqlandi", "success");
+      if (url) syncWithBackendServer(true);
+    }
+
+    async function testGeminiConnection() {
+      if (!getActiveGeminiKey()) {
+        return showToast("Avval Gemini API kalitini kiriting", "info");
+      }
+      try {
+        showToast("Gemini API tekshirilmoqda...", "info");
+        const res = await callGeminiAPI("Salom, faqat 'Ulandi' deb javob ber.", false);
+        if (res) showToast("Gemini API muvaffaqiyatli ishlayapti!", "success");
+      } catch (e) {
+        showToast("API kalit noto'g'ri yoki limit tugagan", "info");
+      }
+    }
+
+    function setFilter(f) {
+      state.filter = f;
+      document.querySelectorAll('.filter-btn').forEach(b => {
+        b.className = 'filter-btn px-2.5 py-1 rounded text-slate-500 hover:text-slate-900 dark:hover:text-white shrink-0';
+      });
+      document.getElementById('filter-' + f).className = 'filter-btn px-2.5 py-1 rounded bg-slate-900 dark:bg-slate-800 text-white font-medium shrink-0';
+      renderLeads();
+    }
+
+    function renderQuickReplies() {
+      const bar = document.getElementById('quickRepliesBar');
+      if (state.templates.length === 0) {
+        bar.innerHTML = `<span class="text-[11px] text-slate-500">Shablonlar qo'shilmagan (Sozlamalardan qo'shing)</span>`;
+        return;
+      }
+      bar.innerHTML = state.templates.map((t, i) => `
+        <button type="button" onclick="insertTemplate(${i})" class="px-2.5 py-0.5 rounded bg-slate-100 dark:bg-darkElevated hover:border-slate-400 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-darkBorder text-[11px] font-medium shrink-0 transition">
+          ${t.title}
+        </button>
+      `).join('');
+    }
+
+    function insertTemplate(i) {
+      const input = document.getElementById('messageInput');
+      input.value = state.templates[i].text;
+      input.focus();
+    }
+
+    function renderModalTemplates() {
+      const list = document.getElementById('settingsTemplatesList');
+      list.innerHTML = state.templates.map((t, i) => `
+        <div class="flex items-center justify-between gap-3 bg-darkBg p-3 rounded-md border border-darkBorder text-xs">
+          <div class="min-w-0">
+            <div class="font-semibold text-slate-200">${t.title}</div>
+            <div class="text-slate-400 truncate mt-0.5">${t.text}</div>
+          </div>
+          <button onclick="removeTemplate(${i})" class="text-slate-500 hover:text-red-400 p-1"><i class="fa-solid fa-trash-can"></i></button>
+        </div>
+      `).join('') || `<p class="text-xs text-slate-500">Hozircha shablonlar yo'q</p>`;
+    }
+
+    function addTemplate() {
+      const title = document.getElementById('newTplTitle').value.trim();
+      const text = document.getElementById('newTplText').value.trim();
+      if (!title || !text) return;
+      state.templates.push({ title, text });
+      document.getElementById('newTplTitle').value = '';
+      document.getElementById('newTplText').value = '';
+      saveState();
+      renderQuickReplies();
+      renderModalTemplates();
+      showToast("Shablon qo'shildi", "success");
+    }
+
+    function removeTemplate(i) {
+      state.templates.splice(i, 1);
+      saveState();
+      renderQuickReplies();
+      renderModalTemplates();
+    }
+
+    function saveKnowledgeBaseFromTab() {
+      state.knowledgeBase = document.getElementById('aiKnowledgeEditor').value;
+      saveState();
+      showToast("Ma'lumotlar bazasi saqlandi", "success");
+    }
+
+    function changeAiVibe(val) {
+      state.aiVibe = val;
+      saveState();
+      showToast("Muloqot uslubi yangilandi", "info");
+    }
+
+    function toggleAutopilotGlobal() {
+      state.autopilot = !state.autopilot;
+      const lbl = document.getElementById('autopilotStateLabel');
+      lbl.innerText = state.autopilot ? 'FAOL' : 'O\'CHIQ';
+      lbl.className = state.autopilot ? 'px-1.5 py-0.2 rounded bg-emerald-600 text-white text-[10px] font-semibold' : 'px-1.5 py-0.2 rounded bg-slate-600 text-slate-200 text-[10px] font-semibold';
+      showToast(state.autopilot ? "AI menejer faollashtirildi" : "AI menejer to'xtatildi", "info");
+    }
+
+    function copyServerCode() {
+      const code = document.getElementById('serverCodeBlock').innerText;
+      const temp = document.createElement('textarea');
+      temp.value = code;
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand('copy');
+      temp.remove();
+      showToast("server.js kodi nusxalandi", "success");
+    }
+
+    function renderNotifications() {
+      const list = document.getElementById('notifList');
+      const badge = document.getElementById('notifBadge');
+      badge.innerText = state.notifications.length;
+      badge.style.display = state.notifications.length > 0 ? 'flex' : 'none';
+      list.innerHTML = state.notifications.map(n => `
+        <div class="p-2 rounded bg-slate-100 dark:bg-darkBg border border-slate-200 dark:border-darkBorder">
+          <p class="text-slate-700 dark:text-slate-200">${n.text}</p>
+          <span class="text-[10px] font-mono text-slate-400">${n.time}</span>
+        </div>
+      `).join('') || `<p class="text-slate-500 text-center py-2">Yangi bildirishnomalar yo'q</p>`;
+    }
+
+    function toggleNotificationsPopover() {
+      document.getElementById('notifPopover').classList.toggle('hidden');
+    }
+
+    function clearNotifications() {
+      state.notifications = [];
+      saveState();
+      renderNotifications();
+    }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      const icon = document.getElementById('themeIcon');
+      if (html.classList.contains('dark')) {
+        html.classList.remove('dark');
+        icon.className = 'fa-solid fa-moon text-xs';
+      } else {
+        html.classList.add('dark');
+        icon.className = 'fa-solid fa-sun text-xs';
+      }
+    }
+
+    function toggleMobileCrmDrawer() {
+      const panel = document.getElementById('crmInfoPanel');
+      panel.classList.toggle('hidden');
+      panel.classList.toggle('fixed');
+      panel.classList.toggle('inset-y-14');
+      panel.classList.toggle('right-0');
+    }
+  </script>
+</body>
+</html>
